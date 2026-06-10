@@ -3,9 +3,853 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>To-do systeem</title>
+<title>Ilse To-do</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f3; color: #1a1a1a; min-height: 100vh; }
+
+/* ── Header ── */
+.header { background: white; border-bottom: 1px solid #ebebeb; position: sticky; top: 0; z-index: 100; }
+.header-top { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px 0; }
+.header h1 { font-size: 19px; font-weight: 700; }
+.subdate { font-size: 12px; color: #b0b0b0; margin-top: 2px; }
+.btn-add { background: #1a1a1a; color: white; border: none; border-radius: 8px; padding: 8px 16px; font-size: 13px; font-weight: 600; cursor: pointer; }
+
+/* ── Main nav ── */
+.main-nav { display: flex; border-bottom: 1px solid #ebebeb; padding: 0 18px; }
+.nav-tab { padding: 10px 0; margin-right: 24px; font-size: 14px; font-weight: 600; color: #b0b0b0; border: none; background: none; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all 0.15s; }
+.nav-tab.active { color: #1a1a1a; border-bottom-color: #1a1a1a; }
+
+/* ── Project filter pills ── */
+.proj-filters { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding: 10px 18px; }
+.proj-filters::-webkit-scrollbar { display: none; }
+.pill { background: #f0f0ee; border: none; border-radius: 20px; padding: 5px 13px; font-size: 12px; font-weight: 500; cursor: pointer; white-space: nowrap; color: #6b6b6b; transition: all 0.15s; }
+.pill.active { background: #1a1a1a; color: white; }
+
+/* ── Main content ── */
+.main { max-width: 700px; margin: 0 auto; padding: 16px 16px 60px; }
+
+/* ── Task groups ── */
+.group { margin-bottom: 24px; }
+.group-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #c8c8c8; margin-bottom: 8px; padding: 0 2px; }
+.group-label.laat  { color: #fca5a5; }
+.group-label.today { color: #fdba74; }
+
+/* ── Task card ── */
+.task { background: white; border-radius: 10px; padding: 12px 13px; margin-bottom: 5px; display: flex; gap: 11px; border: 1px solid #f0f0ee; transition: opacity 0.3s, transform 0.3s; }
+.task.ov { background: #fff8f8; border-color: #fde8e8; }
+.task.tod { background: #fffcf4; border-color: #fef3c7; }
+.task.out { opacity: 0; transform: translateX(16px); }
+
+.check { width: 19px; height: 19px; border-radius: 50%; border: 2px solid #ddd; flex-shrink: 0; cursor: pointer; margin-top: 1px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 800; color: white; transition: all 0.15s; }
+.check:hover { border-color: #aaa; }
+.check.done { background: #4ade80; border-color: #4ade80; }
+
+.task-body { flex: 1; min-width: 0; }
+.task-name { font-size: 14px; font-weight: 500; line-height: 1.35; margin-bottom: 4px; }
+.task-meta { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+.badge { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.02em; }
+.b-weekmenuflyer { background: #dbeafe; color: #1d4ed8; }
+.b-menuplanning  { background: #ede9fe; color: #6d28d9; }
+.b-koelkast      { background: #ffedd5; color: #c2410c; }
+.b-social        { background: #fce7f3; color: #be185d; }
+.b-overig        { background: #f3f4f6; color: #6b7280; }
+.doelw { font-size: 11px; color: #aaa; }
+.dl { font-size: 11px; color: #aaa; margin-left: auto; }
+.dl.laat  { color: #f87171; font-weight: 700; }
+.dl.today { color: #fb923c; font-weight: 700; }
+.task-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 5px;
+  margin-top: 6px;
+  cursor: pointer;
+  padding: 5px 8px;
+  background: #f8f8f6;
+  border-radius: 6px;
+  border-left: 2px solid #e5e5e5;
+  transition: background 0.15s;
+}
+.task-note:hover { background: #f0f0ee; }
+.task-note svg { flex-shrink: 0; margin-top: 1px; color: #9ca3af; }
+.task-note-text { font-size: 12px; color: #6b7280; line-height: 1.4; word-break: break-word; }
+.note-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 5px;
+  font-size: 11px;
+  color: #d1d5db;
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 2px 0;
+  transition: color 0.15s;
+}
+.note-add:hover { color: #9ca3af; }
+
+/* ── Overzicht ── */
+.overzicht { padding: 16px; max-width: 800px; margin: 0 auto; }
+.ov-scroll { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; background: white; border-radius: 12px; overflow: hidden; border: 1px solid #f0f0ee; }
+th { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; padding: 12px 14px; text-align: left; border-bottom: 1px solid #f0f0ee; background: #fafafa; }
+td { padding: 10px 14px; border-bottom: 1px solid #f8f8f8; vertical-align: middle; font-size: 13px; }
+tr:last-child td { border-bottom: none; }
+.week-cell { font-weight: 600; font-size: 13px; color: #555; white-space: nowrap; }
+.week-cell.current { color: #1a1a1a; }
+.current-week-row td { border-bottom: 2.5px solid #ef4444; }
+
+.status-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.status-badge.empty { background: #f3f4f6; color: #c4c4c4; font-style: italic; }
+
+/* Status colors */
+.s-green  { background: #dcfce7; color: #15803d; }
+.s-blue   { background: #dbeafe; color: #1d4ed8; }
+.s-purple { background: #ede9fe; color: #6d28d9; }
+.s-orange { background: #fff7ed; color: #c2410c; }
+.s-yellow { background: #fefce8; color: #a16207; }
+.s-gray   { background: #f3f4f6; color: #6b7280; }
+.s-sky    { background: #e0f2fe; color: #0369a1; }
+
+/* ── Status dropdown ── */
+.status-menu {
+  position: fixed;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 6px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  z-index: 300;
+  min-width: 200px;
+}
+.status-option {
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  font-weight: 500;
+}
+.status-option:hover { background: #f5f5f3; }
+
+/* ── Modal ── */
+.overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 200; display: none; align-items: flex-end; justify-content: center; }
+.overlay.open { display: flex; }
+.modal { background: white; border-radius: 20px 20px 0 0; padding: 24px 18px 44px; width: 100%; max-width: 700px; animation: up 0.22s ease; }
+@keyframes up { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.modal h2 { font-size: 16px; font-weight: 700; margin-bottom: 18px; }
+.fg { margin-bottom: 13px; }
+.fg label { display: block; font-size: 10px; font-weight: 700; color: #aaa; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 5px; }
+.fg input, .fg select, .fg textarea { width: 100%; border: 1.5px solid #e5e7eb; border-radius: 8px; padding: 10px 11px; font-size: 15px; font-family: inherit; outline: none; background: white; color: #1a1a1a; }
+.fg input:focus, .fg select:focus, .fg textarea:focus { border-color: #1a1a1a; }
+.fg textarea { resize: vertical; min-height: 70px; }
+.modal-btns { display: flex; gap: 10px; margin-top: 18px; }
+.btn-save { flex: 1; background: #1a1a1a; color: white; border: none; border-radius: 10px; padding: 13px; font-size: 14px; font-weight: 600; cursor: pointer; }
+.btn-save:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-cancel { background: #f3f4f6; color: #6b7280; border: none; border-radius: 10px; padding: 13px 18px; font-size: 14px; font-weight: 600; cursor: pointer; }
+
+/* ── Mail modal ── */
+.mail-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 300; display: none; align-items: center; justify-content: center; padding: 20px; }
+.mail-overlay.open { display: flex; }
+.mail-modal { background: white; border-radius: 16px; padding: 22px 20px 24px; width: 100%; max-width: 420px; }
+.mail-modal h3 { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+.mail-subtitle { font-size: 12px; color: #aaa; margin-bottom: 16px; }
+.contacts { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+.contact-row { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border: 1.5px solid #e5e7eb; border-radius: 8px; cursor: pointer; transition: all 0.12s; }
+.contact-row.selected { border-color: #1a1a1a; background: #f9f9f9; }
+.contact-check { width: 18px; height: 18px; border-radius: 4px; border: 2px solid #d1d5db; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 800; }
+.contact-row.selected .contact-check { background: #1a1a1a; border-color: #1a1a1a; color: white; }
+.contact-name { font-size: 13px; font-weight: 600; }
+.contact-email { font-size: 11px; color: #aaa; margin-left: auto; }
+.mail-note { margin-bottom: 16px; }
+.mail-note label { display: block; font-size: 10px; font-weight: 700; color: #aaa; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 5px; }
+.mail-note input { width: 100%; border: 1.5px solid #e5e7eb; border-radius: 8px; padding: 9px 11px; font-size: 14px; font-family: inherit; outline: none; }
+.mail-note input:focus { border-color: #1a1a1a; }
+.mail-btns { display: flex; gap: 8px; }
+.btn-mail-send { flex: 1; background: #1a1a1a; color: white; border: none; border-radius: 10px; padding: 12px; font-size: 14px; font-weight: 600; cursor: pointer; }
+.btn-mail-send:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn-mail-cancel { background: #f3f4f6; color: #6b7280; border: none; border-radius: 10px; padding: 12px 16px; font-size: 14px; font-weight: 600; cursor: pointer; }
+.btn-mail-row { background: none; border: none; cursor: pointer; color: #bbb; font-size: 18px; padding: 4px 6px; border-radius: 6px; transition: all 0.12s; line-height: 1; }
+.btn-mail-row:hover { color: #1a1a1a; background: #f0f0ee; }
+
+.empty { text-align: center; padding: 50px 20px; color: #c4c4c4; font-size: 14px; }
+.toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%) translateY(8px); background: #1a1a1a; color: white; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 500; opacity: 0; transition: all 0.22s; pointer-events: none; white-space: nowrap; z-index: 400; }
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
 </head>
 <body>
-  <h1>Komt eraan...</h1>
+
+<div class="header">
+  <div class="header-top">
+    <div>
+      <h1>To-do</h1>
+      <div class="subdate" id="datum"></div>
+    </div>
+    <button class="btn-add" id="btnAdd">+ Nieuw</button>
+  </div>
+  <div class="main-nav">
+    <button class="nav-tab active" data-view="taken">Taken</button>
+    <button class="nav-tab" data-view="overzicht">Overzicht</button>
+  </div>
+  <div class="proj-filters" id="projFilters" style="display:none"></div>
+</div>
+
+<div id="viewTaken">
+  <div class="main" id="takenMain"><div class="empty">Laden...</div></div>
+</div>
+
+<div id="viewOverzicht" style="display:none">
+  <div class="overzicht">
+    <div class="ov-scroll">
+      <div id="overzichtMain"><div class="empty">Laden...</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- Add task modal -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <h2>Nieuwe taak</h2>
+    <div class="fg"><label>Taak</label><input type="text" id="fTaak" placeholder="Wat moet je doen?" /></div>
+    <div class="fg"><label>Project</label>
+      <select id="fProject">
+        <option value="">— Geen project —</option>
+        <option value="Weekmenuflyer">Weekmenuflyer</option>
+        <option value="Menuplanning">Menuplanning</option>
+        <option value="Koelkast">Koelkast</option>
+        <option value="Social posts">Social posts</option>
+        <option value="Overig">Overig</option>
+      </select>
+    </div>
+    <div class="fg"><label>Deadline</label><input type="date" id="fDeadline" /></div>
+    <div class="fg"><label>Opmerking (optioneel)</label><textarea id="fNote" placeholder="Extra info, links..."></textarea></div>
+    <div class="modal-btns">
+      <button class="btn-cancel" id="btnCancel">Annuleren</button>
+      <button class="btn-save" id="btnSave">Opslaan in Notion</button>
+    </div>
+  </div>
+</div>
+
+<!-- Status dropdown -->
+<div class="status-menu" id="statusMenu" style="display:none"></div>
+
+<!-- Mail modal -->
+<div class="mail-overlay" id="mailOverlay">
+  <div class="mail-modal">
+    <h3 id="mailTitle">Mail versturen</h3>
+    <div class="mail-subtitle" id="mailSubtitle"></div>
+    <div class="contacts" id="contactList"></div>
+    <div class="mail-note">
+      <label>Link (optioneel)</label>
+      <input type="text" id="mailLink" placeholder="bijv. Canva link" />
+    </div>
+    <div class="mail-note" style="margin-top:4px">
+      <label>Onderwerp</label>
+      <input type="text" id="mailSubject" />
+    </div>
+    <div class="mail-note" style="margin-top:4px">
+      <label>Bericht</label>
+      <textarea id="mailBody" style="width:100%;border:1.5px solid #e5e7eb;border-radius:8px;padding:10px 11px;font-size:13px;font-family:inherit;outline:none;resize:vertical;min-height:130px;line-height:1.5"></textarea>
+    </div>
+    <div class="mail-btns">
+      <button class="btn-mail-cancel" id="btnMailCancel">Annuleren</button>
+      <button class="btn-mail-send" id="btnMailSend">Verstuur</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit task modal -->
+<div class="overlay" id="editOverlay">
+  <div class="modal">
+    <h2>Taak bewerken</h2>
+    <div class="fg"><label>Taak</label><input type="text" id="eTaak" /></div>
+    <div class="fg"><label>Deadline</label><input type="date" id="eDeadline" /></div>
+    <div class="fg"><label>Project</label>
+      <select id="eProject">
+        <option value="">— Geen project —</option>
+        <option value="Weekmenuflyer">Weekmenuflyer</option>
+        <option value="Menuplanning">Menuplanning</option>
+        <option value="Koelkast">Koelkast</option>
+        <option value="Social posts">Social posts</option>
+        <option value="Overig">Overig</option>
+      </select>
+    </div>
+    <div class="fg"><label>Opmerking / link</label><textarea id="eNote" placeholder="bijv. Canva link, extra info..."></textarea></div>
+    <div class="modal-btns">
+      <button class="btn-cancel" id="btnEditCancel">Annuleren</button>
+      <button class="btn-save" id="btnEditSave">Opslaan</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API = 'https://todo-api.ilse-grootjes.workers.dev';
+let tasks = [];
+let projects = {};
+let projFilter = 'alles';
+let currentView = 'taken';
+let statusMenuTarget = null;
+
+const todayStr = new Date().toISOString().split('T')[0];
+const in7 = new Date(Date.now() + 7*864e5).toISOString().split('T')[0];
+const D = ['Zondag','Maandag','Dinsdag','Woensdag','Donderdag','Vrijdag','Zaterdag'];
+const M = ['januari','februari','maart','april','mei','juni','juli','augustus','september','oktober','november','december'];
+const MS = ['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec'];
+const now = new Date();
+document.getElementById('datum').textContent = `${D[now.getDay()]} ${now.getDate()} ${M[now.getMonth()]}`;
+
+// ── Project status options ──
+const STATUS_OPTIONS = {
+  weekmenuflyer: ['Nog niet begonnen','Wachtend op GO Pieter','Bezig','Klaar voor proofread','Besteld','Geleverd'],
+  koelkast: ['Nog niet begonnen','Wachtend op GO Pieter','Bezig','Product informatie verwerkt','Bestelling geplaatst','Klaar'],
+  menuplanning: ['Menu gemaakt','Pieter GO','Menu klaargezet in Shop','Live gegaan'],
+};
+
+function statusClass(s) {
+  if (!s) return 'empty';
+  const green  = ['Geleverd','Live gegaan','Klaar'];
+  const blue   = ['Besteld','Bestelling geplaatst'];
+  const purple = ['Klaar voor proofread'];
+  const orange = ['Bezig','Product informatie verwerkt'];
+  const yellow = ['Wachtend op GO Pieter','Pieter GO'];
+  const sky    = ['Menu gemaakt','Menu klaargezet in Shop'];
+  if (green.includes(s))  return 's-green';
+  if (blue.includes(s))   return 's-blue';
+  if (purple.includes(s)) return 's-purple';
+  if (orange.includes(s)) return 's-orange';
+  if (yellow.includes(s)) return 's-yellow';
+  if (sky.includes(s))    return 's-sky';
+  return 's-gray';
+}
+
+function weekNum(wStr) {
+  const m = wStr.match(/\d+/);
+  return m ? parseInt(m[0]) : 999;
+}
+
+function weekDates(wStr) {
+  const n = weekNum(wStr);
+  if (n === 999) return '';
+  // ISO week N Monday for 2026
+  const jan4 = new Date(2026, 0, 4);
+  const jan4Day = jan4.getDay() || 7;
+  const monday = new Date(jan4);
+  monday.setDate(jan4.getDate() - (jan4Day - 1) + (n - 1) * 7);
+  // Menu week starts Friday = Monday - 3 days
+  const fri = new Date(monday); fri.setDate(monday.getDate() - 3);
+  const thu = new Date(fri);    thu.setDate(fri.getDate() + 6);
+  const fmt = d => `${d.getDate()} ${MS[d.getMonth()]}`;
+  return `vr ${fmt(fri)} – do ${fmt(thu)}`;
+}
+
+function isLate(d)  { return d && d < todayStr; }
+function isToday(d) { return d === todayStr; }
+function isWeek(d)  { return d && d > todayStr && d <= in7; }
+
+function fmtDate(d) {
+  if (!d) return '';
+  const [,m,day] = d.split('-');
+  return `${parseInt(day)} ${MS[parseInt(m)-1]}`;
+}
+
+function badgeClass(p) {
+  return { 'Weekmenuflyer':'b-weekmenuflyer','Menuplanning':'b-menuplanning','Koelkast':'b-koelkast','Social posts':'b-social','Overig':'b-overig' }[p] || 'b-overig';
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Navigation ──
+document.querySelectorAll('.nav-tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentView = btn.dataset.view;
+    document.getElementById('viewTaken').style.display    = currentView === 'taken' ? '' : 'none';
+    document.getElementById('viewOverzicht').style.display = currentView === 'overzicht' ? '' : 'none';
+    document.getElementById('projFilters').style.display   = currentView === 'taken' ? 'flex' : 'none';
+    document.getElementById('btnAdd').style.display        = currentView === 'taken' ? '' : 'none';
+    if (currentView === 'overzicht' && !Object.keys(projects).length) loadProjects();
+  });
+});
+
+// ── Taken view ──
+function renderProjFilters() {
+  const projs = [...new Set(tasks.map(t => t.project).filter(Boolean))];
+  const all = [{ id: 'alles', label: 'Alles' }, ...projs.map(p => ({ id: p, label: p }))];
+  document.getElementById('projFilters').innerHTML = all.map(f =>
+    `<button class="pill${projFilter === f.id ? ' active' : ''}" data-p="${f.id}">${f.label}</button>`
+  ).join('');
+  document.querySelectorAll('.pill').forEach(b =>
+    b.addEventListener('click', () => { projFilter = b.dataset.p; renderTaken(); })
+  );
+  document.getElementById('projFilters').style.display = 'flex';
+}
+
+function renderTaken() {
+  renderProjFilters();
+  const list = projFilter === 'alles' ? tasks : tasks.filter(t => t.project === projFilter);
+
+  const late  = list.filter(t => isLate(t.deadline));
+  const today = list.filter(t => isToday(t.deadline));
+  const week  = list.filter(t => isWeek(t.deadline));
+  const later = list.filter(t => !t.deadline || t.deadline > in7);
+
+  const groups = [];
+  if (late.length)  groups.push({ label: `Te laat — ${late.length} ${late.length===1?'taak':'taken'}`, cls:'laat',  list: late });
+  if (today.length) groups.push({ label: 'Vandaag',          cls:'today', list: today });
+  if (week.length)  groups.push({ label: 'Komende 7 dagen',  cls:'',      list: week });
+  if (later.length) groups.push({ label: 'Later',            cls:'',      list: later });
+
+  if (!groups.length) {
+    document.getElementById('takenMain').innerHTML = '<div class="empty">Geen taken</div>';
+    return;
+  }
+
+  document.getElementById('takenMain').innerHTML = groups.map(g => `
+    <div class="group">
+      <div class="group-label ${g.cls}">${g.label}</div>
+      ${g.list.map(taskCard).join('')}
+    </div>
+  `).join('');
+
+  document.querySelectorAll('.check').forEach(el =>
+    el.addEventListener('click', () => markDone(el.dataset.id, el))
+  );
+  document.querySelectorAll('[data-taskid]').forEach(el =>
+    el.addEventListener('click', () => {
+      const t = tasks.find(x => x.id === el.dataset.taskid);
+      if (t) openMailModal(t.doelweek || t.taak, t.taak);
+    })
+  );
+  document.querySelectorAll('[data-editid]').forEach(el =>
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const t = tasks.find(x => x.id === el.dataset.editid);
+      if (t) openEditModal(t);
+    })
+  );
+}
+
+function taskCard(t) {
+  const ov  = isLate(t.deadline);
+  const tod = isToday(t.deadline);
+  return `<div class="task${ov?' ov':tod?' tod':''}" id="c-${t.id}">
+    <div class="check" data-id="${t.id}"></div>
+    <div class="task-body">
+      <div class="task-name">${esc(t.taak)}</div>
+      <div class="task-meta">
+        ${t.project ? `<span class="badge ${badgeClass(t.project)}">${esc(t.project)}</span>` : ''}
+        ${t.doelweek ? `<span class="doelw">${esc(t.doelweek)}</span>` : ''}
+        ${t.deadline ? `<span class="dl${ov?' laat':tod?' today':''}">${fmtDate(t.deadline)}</span>` : ''}
+      </div>
+      ${t.opmerking
+        ? `<div class="task-note" data-editid="${t.id}">
+             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+             <span class="task-note-text">${esc(t.opmerking)}</span>
+           </div>`
+        : `<button class="note-add" data-editid="${t.id}">
+             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+             opmerking toevoegen
+           </button>`
+      }
+    </div>
+    <button class="btn-mail-row" data-taskid="${t.id}" title="Mail versturen">✉</button>
+  </div>`;
+}
+
+// ── Overzicht view ──
+function currentISOWeek() {
+  const now = new Date();
+  const jan4 = new Date(now.getFullYear(), 0, 4);
+  const jan4Day = jan4.getDay() || 7;
+  const monday = new Date(jan4);
+  monday.setDate(jan4.getDate() - (jan4Day - 1));
+  return Math.floor((now - monday) / (7 * 864e5)) + 1;
+}
+
+function renderOverzicht() {
+  if (!Object.keys(projects).length) return;
+
+  // Build lookup maps keyed by week number (normalise capitalisation/format)
+  const map = {};
+  ['weekmenuflyer','koelkast','menuplanning'].forEach(k => {
+    map[k] = {};
+    (projects[k] || []).forEach(e => {
+      const n = weekNum(e.week);
+      if (n !== 999 && !map[k][n]) map[k][n] = e; // first entry wins for duplicates
+    });
+  });
+
+  const curWeek = currentISOWeek();
+  const maxWeek = Math.max(36, curWeek + 10);
+
+  const rows = [];
+  for (let wn = 15; wn <= maxWeek; wn++) {
+    const isCurrent = wn === curWeek;
+    const isPast = wn < curWeek;
+    const rowClass = isCurrent ? ' class="current-week-row"' : '';
+    const cellClass = isCurrent ? ' current' : '';
+    const cells = ['weekmenuflyer','koelkast','menuplanning'].map(k => {
+      const entry = map[k][wn];
+      const s = entry?.status || null;
+      if (s) return `<td><span class="status-badge ${statusClass(s)}">${esc(s)}</span></td>`;
+      if (isPast || isCurrent) return `<td><span class="status-badge s-green">Klaar</span></td>`;
+      return `<td></td>`;
+    }).join('');
+    rows.push(`<tr${rowClass}>
+      <td class="week-cell${cellClass}">
+        <div>Week ${wn}</div>
+        <div style="font-size:10px;color:#bbb;font-weight:400;margin-top:1px">${weekDates(`Week ${wn}`)}</div>
+      </td>
+      ${cells}
+    </tr>`);
+  }
+
+  document.getElementById('overzichtMain').innerHTML = `
+    <table>
+      <thead><tr>
+        <th>Week</th>
+        <th style="color:#1d4ed8">Weekmenuflyer</th>
+        <th style="color:#6d28d9">Menuplanning</th>
+        <th style="color:#c2410c">Koelkast</th>
+      </tr></thead>
+      <tbody>${rows.join('')}</tbody>
+    </table>
+  `;
+}
+
+function openStatusMenu(e, el) {
+  e.stopPropagation();
+  const proj = el.dataset.proj;
+  const id   = el.dataset.id;
+  const options = STATUS_OPTIONS[proj] || [];
+
+  const menu = document.getElementById('statusMenu');
+  menu.innerHTML = options.map(s =>
+    `<div class="status-option" data-status="${esc(s)}">${esc(s)}</div>`
+  ).join('');
+
+  const rect = el.getBoundingClientRect();
+  menu.style.top  = (rect.bottom + 6) + 'px';
+  menu.style.left = rect.left + 'px';
+  menu.style.display = 'block';
+  statusMenuTarget = { id, el, proj };
+
+  menu.querySelectorAll('.status-option').forEach(opt => {
+    opt.addEventListener('click', () => setStatus(opt.dataset.status));
+  });
+}
+
+async function setStatus(newStatus) {
+  const { id, el, proj } = statusMenuTarget;
+  document.getElementById('statusMenu').style.display = 'none';
+  if (!id) return;
+
+  const prev = el.textContent;
+  el.textContent = newStatus;
+  el.className = `status-badge ${statusClass(newStatus)}`;
+
+  // Update local data
+  const arr = projects[proj];
+  const entry = arr.find(e => e.id === id);
+  if (entry) entry.status = newStatus;
+
+  try {
+    await fetch(`${API}/projects/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: newStatus }),
+    });
+    toast('Status bijgewerkt in Notion');
+  } catch {
+    el.textContent = prev;
+    el.className = `status-badge ${statusClass(prev)}`;
+    toast('Opslaan mislukt');
+  }
+}
+
+document.addEventListener('click', () => {
+  document.getElementById('statusMenu').style.display = 'none';
+});
+
+// ── API calls ──
+async function loadTasks() {
+  try {
+    const r = await fetch(`${API}/tasks`);
+    tasks = await r.json();
+    renderTaken();
+  } catch {
+    document.getElementById('takenMain').innerHTML = '<div class="empty">Kan Notion niet bereiken</div>';
+  }
+}
+
+async function loadProjects() {
+  document.getElementById('overzichtMain').innerHTML = '<div class="empty">Laden...</div>';
+  try {
+    const r = await fetch(`${API}/projects`);
+    projects = await r.json();
+    renderOverzicht();
+  } catch {
+    document.getElementById('overzichtMain').innerHTML = '<div class="empty">Kan projecten niet laden</div>';
+  }
+}
+
+async function markDone(id, el) {
+  el.classList.add('done');
+  el.textContent = '✓';
+  const card = document.getElementById('c-' + id);
+  const task = tasks.find(t => t.id === id);
+  try {
+    await fetch(`${API}/tasks/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ klaar: true, taak: task?.taak, doelweek: task?.doelweek }),
+    });
+    setTimeout(() => {
+      card.classList.add('out');
+      setTimeout(() => { tasks = tasks.filter(t => t.id !== id); renderTaken(); toast('Klaar!'); }, 320);
+    }, 250);
+  } catch {
+    el.classList.remove('done'); el.textContent = '';
+    toast('Opslaan mislukt');
+  }
+}
+
+// ── Modal ──
+document.getElementById('btnAdd').onclick = () => {
+  document.getElementById('overlay').classList.add('open');
+  setTimeout(() => document.getElementById('fTaak').focus(), 50);
+};
+document.getElementById('btnCancel').onclick = closeModal;
+document.getElementById('overlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('overlay')) closeModal();
+});
+document.getElementById('fTaak').addEventListener('keydown', e => { if (e.key === 'Enter') saveTask(); });
+document.getElementById('btnSave').onclick = saveTask;
+
+function closeModal() {
+  document.getElementById('overlay').classList.remove('open');
+  ['fTaak','fDeadline','fNote'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('fProject').value = '';
+}
+
+async function saveTask() {
+  const taak = document.getElementById('fTaak').value.trim();
+  if (!taak) { document.getElementById('fTaak').focus(); return; }
+  const btn = document.getElementById('btnSave');
+  btn.textContent = 'Opslaan...'; btn.disabled = true;
+  try {
+    await fetch(`${API}/tasks`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        taak,
+        project:  document.getElementById('fProject').value  || null,
+        deadline: document.getElementById('fDeadline').value || null,
+        opmerking: document.getElementById('fNote').value.trim() || null,
+      }),
+    });
+    closeModal();
+    toast('Taak toegevoegd');
+    await loadTasks();
+  } catch {
+    btn.textContent = 'Mislukt — probeer opnieuw';
+    setTimeout(() => { btn.textContent = 'Opslaan in Notion'; btn.disabled = false; }, 2000);
+  } finally {
+    btn.textContent = 'Opslaan in Notion'; btn.disabled = false;
+  }
+}
+
+// ── Edit modal ──
+let editTaskId = null;
+
+function openEditModal(t) {
+  editTaskId = t.id;
+  document.getElementById('eTaak').value = t.taak || '';
+  document.getElementById('eDeadline').value = t.deadline || '';
+  document.getElementById('eProject').value = t.project || '';
+  document.getElementById('eNote').value = t.opmerking || '';
+  document.getElementById('editOverlay').classList.add('open');
+  setTimeout(() => document.getElementById('eNote').focus(), 50);
+}
+
+document.getElementById('btnEditCancel').onclick = () => document.getElementById('editOverlay').classList.remove('open');
+document.getElementById('editOverlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('editOverlay')) document.getElementById('editOverlay').classList.remove('open');
+});
+
+document.getElementById('btnEditSave').onclick = async () => {
+  const btn = document.getElementById('btnEditSave');
+  btn.textContent = 'Opslaan...'; btn.disabled = true;
+  const body = {
+    taak:     document.getElementById('eTaak').value.trim(),
+    deadline: document.getElementById('eDeadline').value || null,
+    project:  document.getElementById('eProject').value || null,
+    opmerking: document.getElementById('eNote').value.trim() || null,
+  };
+  try {
+    await fetch(`${API}/tasks/${editTaskId}/edit`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    document.getElementById('editOverlay').classList.remove('open');
+    toast('Bijgewerkt in Notion');
+    await loadTasks();
+  } catch {
+    toast('Opslaan mislukt');
+  } finally {
+    btn.textContent = 'Opslaan'; btn.disabled = false;
+  }
+};
+
+// ── Mail modal ──
+const CONTACTS = [
+  { name: 'Aaron',   email: 'aron@thuysvers.nl' },
+  { name: 'Marcus',  email: 'Marcus.leloux@thuysvers.nl' },
+  { name: 'Pieter',  email: 'Pieter@thuysvers.nl' },
+];
+
+let mailWeek = '';
+let mailTask = '';
+let selectedContacts = new Set();
+
+function greeting(indices) {
+  const names = [...indices].map(i => CONTACTS[i].name);
+  if (!names.length) return 'Hey,';
+  if (names.length === 1) return `Hey ${names[0]},`;
+  return `Hey ${names.slice(0,-1).join(', ')} en ${names[names.length-1]},`;
+}
+
+function generateTemplate() {
+  const g = greeting(selectedContacts);
+  const tl = mailTask.toLowerCase();
+  const wn = mailWeek ? weekNum(mailWeek) : null;
+  const wi = wn ? `week ${wn} (${weekDates(`Week ${wn}`)})` : '';
+  const link = document.getElementById('mailLink').value.trim();
+  let body = '';
+  if (tl.includes('nieuw menu') || tl.includes('menu maken')) {
+    body = `${g}\n\nIk heb het menu${wi ? ' voor ' + wi : ''} gemaakt. Zou jij hier even naar willen kijken en een go willen geven als het klaar is?`;
+  } else if (tl.includes('weekmenuflyer') || tl.includes('flyer')) {
+    body = `${g}\n\nDe weekmenuflyer${wi ? ' voor ' + wi : ''} staat klaar voor proofread. Zou jij er even naar willen kijken?`;
+  } else if (tl.includes('koelkast') || tl.includes('productinformatie')) {
+    body = `${g}\n\nDe productinformatie${wi ? ' voor ' + wi : ''} staat klaar. Zou jij dit even willen controleren?`;
+  } else {
+    body = `${g}\n\nKunnen jullie even kijken naar: ${mailTask}${wi ? ' (' + wi + ')' : ''}?`;
+  }
+  if (link) body += `\n\n${link}`;
+  body += '\n\nAlvast bedankt!\nIlse';
+  return body;
+}
+
+function generateSubject() {
+  const tl = mailTask.toLowerCase();
+  const wn = mailWeek ? ` week ${weekNum(mailWeek)}` : '';
+  if (tl.includes('nieuw menu') || tl.includes('menu maken')) return `Go-check: menu${wn}`;
+  if (tl.includes('weekmenuflyer') || tl.includes('flyer')) return `Proofread: weekmenuflyer${wn}`;
+  return `${mailTask}${wn}`;
+}
+
+function updateMailCompose() {
+  if (selectedContacts.size > 0) {
+    document.getElementById('mailBody').value = generateTemplate();
+    document.getElementById('mailSubject').value = generateSubject();
+  }
+}
+
+function openMailModal(week, taskTitle) {
+  mailWeek = week || '';
+  mailTask = taskTitle || '';
+  selectedContacts = new Set();
+  document.getElementById('mailTitle').textContent = taskTitle || (week ? `Mail over ${week}` : 'Mail versturen');
+  document.getElementById('mailSubtitle').textContent = week ? weekDates(week) : '';
+  document.getElementById('mailLink').value = '';
+  document.getElementById('mailBody').value = '';
+  document.getElementById('mailSubject').value = '';
+
+  document.getElementById('contactList').innerHTML = CONTACTS.map((c,i) => `
+    <div class="contact-row" data-ci="${i}">
+      <div class="contact-check" id="cc-${i}"></div>
+      <div class="contact-name">${c.name}</div>
+      <div class="contact-email">${c.email}</div>
+    </div>
+  `).join('');
+
+  document.querySelectorAll('.contact-row').forEach(row => {
+    row.addEventListener('click', () => {
+      const i = parseInt(row.dataset.ci);
+      if (selectedContacts.has(i)) {
+        selectedContacts.delete(i);
+        row.classList.remove('selected');
+        document.getElementById(`cc-${i}`).textContent = '';
+      } else {
+        selectedContacts.add(i);
+        row.classList.add('selected');
+        document.getElementById(`cc-${i}`).textContent = '✓';
+      }
+      document.getElementById('btnMailSend').disabled = selectedContacts.size === 0;
+      updateMailCompose();
+    });
+  });
+
+  document.getElementById('mailLink').addEventListener('input', () => {
+    if (selectedContacts.size > 0) updateMailCompose();
+  });
+
+  document.getElementById('btnMailSend').disabled = true;
+  document.getElementById('mailOverlay').classList.add('open');
+}
+
+document.getElementById('btnMailCancel').onclick = () => {
+  document.getElementById('mailOverlay').classList.remove('open');
+};
+document.getElementById('mailOverlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('mailOverlay'))
+    document.getElementById('mailOverlay').classList.remove('open');
+});
+
+document.getElementById('btnMailSend').onclick = async () => {
+  const btn = document.getElementById('btnMailSend');
+  btn.textContent = 'Versturen...'; btn.disabled = true;
+  const to = [...selectedContacts].map(i => CONTACTS[i].email);
+  const subject = document.getElementById('mailSubject').value.trim();
+  const text = document.getElementById('mailBody').value.trim();
+  try {
+    const res = await fetch(`${API}/email`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ to, subject, text }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Mislukt');
+    document.getElementById('mailOverlay').classList.remove('open');
+    toast('Mail verstuurd!');
+  } catch(e) {
+    toast(`Versturen mislukt: ${e.message}`);
+    btn.textContent = 'Verstuur'; btn.disabled = false;
+  }
+};
+
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2500);
+}
+
+// ── Init ──
+loadTasks();
+setInterval(loadTasks, 5 * 60 * 1000);
+</script>
 </body>
 </html>

@@ -588,15 +588,19 @@ function renderOverzicht() {
 
   const curWeek = currentISOWeek();
   const maxWeek = Math.max(36, curWeek + 10);
-  const cutoff = curWeek + 4; // rows beyond this are collapsed by default
+  const pastCutoff = curWeek - 4; // rows before this are collapsed by default
+  const futureCutoff = curWeek + 4; // rows beyond this are collapsed by default
 
   const rows = [];
+  let pastToggleInserted = false;
   for (let wn = 15; wn <= maxWeek; wn++) {
     const isCurrent = wn === curWeek;
     const isPast = wn < curWeek;
-    const isFar = wn > cutoff;
+    const isFarPast = wn < pastCutoff;
+    const isFarFuture = wn > futureCutoff;
     let rowClass = isCurrent ? 'current-week-row' : '';
-    if (isFar) rowClass += (rowClass ? ' ' : '') + 'far-future-row';
+    if (isFarPast)   rowClass += (rowClass ? ' ' : '') + 'far-past-row';
+    if (isFarFuture) rowClass += (rowClass ? ' ' : '') + 'far-future-row';
     const rowAttr = rowClass ? ` class="${rowClass}"` : '';
     const cellClass = isCurrent ? ' current' : '';
     const cells = ['weekmenuflyer','koelkast','menuplanning'].map(k => {
@@ -607,8 +611,18 @@ function renderOverzicht() {
       return `<td></td>`;
     }).join('');
 
-    // Insert toggle row at the cutoff boundary
-    if (wn === cutoff + 1) {
+    // Insert "show past" toggle just before the visible window starts
+    if (!pastToggleInserted && wn === pastCutoff) {
+      pastToggleInserted = true;
+      rows.push(`<tr class="overzicht-toggle-row" id="overzichtTogglePast">
+        <td colspan="4" style="text-align:center;padding:8px 0;cursor:pointer;color:#9ca3af;font-size:12px;user-select:none" onclick="toggleFarPast(this)">
+          ▲ Toon weken eerder dan -4
+        </td>
+      </tr>`);
+    }
+
+    // Insert "show future" toggle at the future cutoff boundary
+    if (wn === futureCutoff + 1) {
       rows.push(`<tr class="overzicht-toggle-row" id="overzichtToggle">
         <td colspan="4" style="text-align:center;padding:8px 0;cursor:pointer;color:#9ca3af;font-size:12px;user-select:none" onclick="toggleFarFuture(this)">
           ▼ Toon weken verder dan +4
@@ -616,7 +630,7 @@ function renderOverzicht() {
       </tr>`);
     }
 
-    rows.push(`<tr${rowAttr} style="${isFar ? 'display:none' : ''}">
+    rows.push(`<tr${rowAttr} style="${isFarPast || isFarFuture ? 'display:none' : ''}">
       <td class="week-cell${cellClass}">
         <div>Week ${wn}</div>
         <div style="font-size:10px;color:#bbb;font-weight:400;margin-top:1px">${weekDates(`Week ${wn}`)}</div>
@@ -643,6 +657,13 @@ function toggleFarFuture(btn) {
   const isHidden = rows[0]?.style.display === 'none';
   rows.forEach(r => r.style.display = isHidden ? '' : 'none');
   btn.textContent = isHidden ? '▲ Verberg weken verder dan +4' : '▼ Toon weken verder dan +4';
+}
+
+function toggleFarPast(btn) {
+  const rows = document.querySelectorAll('.far-past-row');
+  const isHidden = rows[0]?.style.display === 'none';
+  rows.forEach(r => r.style.display = isHidden ? '' : 'none');
+  btn.textContent = isHidden ? '▼ Verberg weken eerder dan -4' : '▲ Toon weken eerder dan -4';
 }
 
 function openStatusMenu(e, el) {

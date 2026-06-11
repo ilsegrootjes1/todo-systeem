@@ -260,14 +260,11 @@ export default {
       // GET /tasks
       if (pathname === '/tasks' && method === 'GET') {
         const data = await notion(env, `/databases/${TASKS_DB}/query`, 'POST', {
-          filter: { and: [
-            { property: 'Klaar', checkbox: { equals: false } },
-            { property: 'Project', select: { does_not_equal: 'Gmail' } },
-          ]},
+          filter: { property: 'Klaar', checkbox: { equals: false } },
           sorts: [{ property: 'Deadline', direction: 'ascending' }],
           page_size: 100,
         });
-        return json(data.results.map(formatTask));
+        return json(data.results.map(formatTask).filter(t => t.project !== 'Gmail'));
       }
 
       // POST /tasks

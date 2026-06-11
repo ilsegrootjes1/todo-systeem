@@ -1168,7 +1168,10 @@ async function loadProposals() {
     });
     el.querySelectorAll('.btn-proposal-add').forEach(btn => {
       btn.addEventListener('click', async () => {
+        const parsed = parseEmail(btn.dataset.task);
         document.getElementById('fTaak').value = btn.dataset.task;
+        if (parsed.project) document.getElementById('fProject').value = parsed.project;
+        if (parsed.deadline) document.getElementById('fDeadline').value = parsed.deadline;
         document.getElementById('overlay').classList.add('open');
         setTimeout(() => document.getElementById('fTaak').focus(), 50);
         fetch(`${API}/gmail/dismiss/${btn.dataset.notionid}`, {

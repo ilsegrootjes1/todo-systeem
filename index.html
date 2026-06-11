@@ -588,12 +588,16 @@ function renderOverzicht() {
 
   const curWeek = currentISOWeek();
   const maxWeek = Math.max(36, curWeek + 10);
+  const cutoff = curWeek + 4; // rows beyond this are collapsed by default
 
   const rows = [];
   for (let wn = 15; wn <= maxWeek; wn++) {
     const isCurrent = wn === curWeek;
     const isPast = wn < curWeek;
-    const rowClass = isCurrent ? ' class="current-week-row"' : '';
+    const isFar = wn > cutoff;
+    let rowClass = isCurrent ? 'current-week-row' : '';
+    if (isFar) rowClass += (rowClass ? ' ' : '') + 'far-future-row';
+    const rowAttr = rowClass ? ` class="${rowClass}"` : '';
     const cellClass = isCurrent ? ' current' : '';
     const cells = ['weekmenuflyer','koelkast','menuplanning'].map(k => {
       const entry = map[k][wn];
@@ -602,7 +606,17 @@ function renderOverzicht() {
       if (isPast || isCurrent) return `<td><span class="status-badge s-green">Klaar</span></td>`;
       return `<td></td>`;
     }).join('');
-    rows.push(`<tr${rowClass}>
+
+    // Insert toggle row at the cutoff boundary
+    if (wn === cutoff + 1) {
+      rows.push(`<tr class="overzicht-toggle-row" id="overzichtToggle">
+        <td colspan="4" style="text-align:center;padding:8px 0;cursor:pointer;color:#9ca3af;font-size:12px;user-select:none" onclick="toggleFarFuture(this)">
+          ▼ Toon weken verder dan +4
+        </td>
+      </tr>`);
+    }
+
+    rows.push(`<tr${rowAttr} style="${isFar ? 'display:none' : ''}">
       <td class="week-cell${cellClass}">
         <div>Week ${wn}</div>
         <div style="font-size:10px;color:#bbb;font-weight:400;margin-top:1px">${weekDates(`Week ${wn}`)}</div>
@@ -622,6 +636,13 @@ function renderOverzicht() {
       <tbody>${rows.join('')}</tbody>
     </table>
   `;
+}
+
+function toggleFarFuture(btn) {
+  const rows = document.querySelectorAll('.far-future-row');
+  const isHidden = rows[0]?.style.display === 'none';
+  rows.forEach(r => r.style.display = isHidden ? '' : 'none');
+  btn.textContent = isHidden ? '▲ Verberg weken verder dan +4' : '▼ Toon weken verder dan +4';
 }
 
 function openStatusMenu(e, el) {
@@ -1095,12 +1116,12 @@ async function loadProposals() {
       ${proposals.map(p => `
         <div class="proposal-item" id="prop-${p.gmailId}">
           <div class="proposal-info">
-            <div class="proposal-subject">${esc(p.subject)}</div>
-            <div class="proposal-from">${esc(p.from)}</div>
+            <div class="proposal-subject">${esc(p.taskSuggestion)}</div>
+            <div class="proposal-from">${esc(p.from)} · ${esc(p.subject)}</div>
           </div>
           <div class="proposal-actions">
             <button class="btn-proposal-dismiss" data-gmailid="${p.gmailId}">Weigeren</button>
-            <button class="btn-proposal-add" data-subject="${esc(p.subject)}" data-gmailid="${p.gmailId}">Invoegen</button>
+            <button class="btn-proposal-add" data-task="${esc(p.taskSuggestion)}" data-gmailid="${p.gmailId}">Invoegen</button>
           </div>
         </div>`).join('')}
     </div>`;
@@ -1114,10 +1135,9 @@ async function loadProposals() {
     });
     el.querySelectorAll('.btn-proposal-add').forEach(btn => {
       btn.addEventListener('click', async () => {
-        document.getElementById('fTaak').value = btn.dataset.subject;
+        document.getElementById('fTaak').value = btn.dataset.task;
         document.getElementById('overlay').classList.add('open');
         setTimeout(() => document.getElementById('fTaak').focus(), 50);
-        // Mark as read so it won't reappear
         await fetch(`${API}/gmail/dismiss/${btn.dataset.gmailid}`, { method: 'POST' });
         document.getElementById(`prop-${btn.dataset.gmailid}`)?.remove();
         if (!el.querySelectorAll('.proposal-item').length) el.style.display = 'none';

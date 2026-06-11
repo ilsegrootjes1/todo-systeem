@@ -123,8 +123,12 @@ async function getGmailToken(env) {
   return data.access_token || null;
 }
 
-// Patterns that indicate an actual request directed at Ilse
-const ACTION_RE = /\b(kun jij|kan jij|kan je|kun je|wil jij|wil je|zou jij|zou je|heb jij|heb je|graag|zou kunnen|actie vereist|follow.?up|could you|can you|would you|please|action required|need you|let me know|laat.{0,5}weten|kun jij|kunt jij)\b|\?/i;
+// Only match explicit action requests directed at the reader (no bare ? — too broad)
+const ACTION_RE = /\b(kun jij|kan jij|kan je|kun je|wil jij|wil je|zou jij|zou je|heb jij|heb je|graag|actie vereist|follow.?up|could you|can you|would you|please|action required|need you|let me know|laat.{0,5}weten|kunt jij|zorg jij|zorg je|stuur jij|stuur je|check jij|check je|kijk jij|kijk je|kun jij even|kan jij even|even sturen|even kijken|even regelen)\b/i;
+
+// Skip automated/transactional senders and subjects
+const SKIP_FROM_RE    = /noreply|no-reply|donotreply|mailer-daemon|notification|updates@|support@|info@|hello@/i;
+const SKIP_SUBJECT_RE = /order|bestelling|levering|delivery|factuur|invoice|receipt|bevestiging|tracking|shipment|bezorging|automatisch|do not reply|je bent uitgenodigd|nieuwsbrief|newsletter/i;
 
 function extractBodyText(payload) {
   if (!payload) return '';
@@ -142,10 +146,21 @@ function extractBodyText(payload) {
 }
 
 function extractTaskSuggestion(bodyText) {
-  const lines = bodyText.split(/[\n]+/).map(s => s.trim()).filter(s => s.length > 15);
+  // Strip quoted/forwarded sections before scanning
+  const clean = bodyText
+    .replace(/^(Op |On |Van:|From:|>).*/gm, '')
+    .replace(/^-{3,}.*/gm, '')
+    .replace(/\[afbeelding\]|\[image\]/gi, '');
+
+  const lines = clean
+    .split(/[\n]+/)
+    .map(s => s.trim())
+    .filter(s => s.length > 15 && s.length < 200)
+    .filter(s => !/^[>|]/.test(s));
+
   for (const line of lines) {
-    if (ACTION_RE.test(line) && !/^>/.test(line)) {
-      return line.replace(/^[\s>*#-]+/, '').slice(0, 80);
+    if (ACTION_RE.test(line)) {
+      return line.replace(/^[\s>*#\-–]+/, '').replace(/\s+/g, ' ').trim().slice(0, 100);
     }
   }
   return null;
@@ -156,7 +171,7 @@ async function fetchGmailProposals(env) {
   if (!token) return null;
 
   const q = encodeURIComponent('is:unread newer_than:7d -from:me');
-  const listRes = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${q}&maxResults=30`, {
+  const listRes = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${q}&maxResults=40`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   const listData = await listRes.json();
@@ -166,7 +181,7 @@ async function fetchGmailProposals(env) {
   const seenSubjects = new Set();
 
   for (const msg of listData.messages) {
-    if (proposals.length >= 6) break;
+    if (proposals.length >= 8) break;
 
     const msgRes = await fetch(
       `https://gmail.googleapis.com/gmail/v1/users/me/messages/${msg.id}?format=full`,
@@ -176,27 +191,64 @@ async function fetchGmailProposals(env) {
     const headers = msgData.payload?.headers || [];
     const subject = headers.find(h => h.name === 'Subject')?.value || '(geen onderwerp)';
     const from    = headers.find(h => h.name === 'From')?.value || '';
-    const date    = headers.find(h => h.name === 'Date')?.value || '';
     const unsub   = headers.find(h => h.name === 'List-Unsubscribe')?.value || '';
 
     if (unsub) continue;
-    if (/noreply|no-reply|donotreply|mailer-daemon/i.test(from)) continue;
+    if (SKIP_FROM_RE.test(from)) continue;
+    if (SKIP_SUBJECT_RE.test(subject)) continue;
 
-    const key = subject.toLowerCase().replace(/\s+/g, '').slice(0, 40);
+    const key = subject.toLowerCase().replace(/^(re:|fwd?:)\s*/i, '').replace(/\s+/g, '').slice(0, 40);
     if (seenSubjects.has(key)) continue;
     seenSubjects.add(key);
 
-    // Only propose if the email body actually asks Ilse to do something
-    const bodyText = extractBodyText(msgData.payload).slice(0, 3000);
+    const bodyText = extractBodyText(msgData.payload).slice(0, 4000);
     const taskSuggestion = extractTaskSuggestion(bodyText);
     if (!taskSuggestion) continue;
 
-    proposals.push({ gmailId: msg.id, subject, from, date, taskSuggestion });
+    proposals.push({ gmailId: msg.id, subject, from, taskSuggestion });
   }
   return proposals;
 }
 
+// Store new Gmail proposals as Notion tasks (project="Gmail") — cron uses this
+async function collectGmailProposals(env) {
+  const proposals = await fetchGmailProposals(env);
+  if (!proposals?.length) return;
+
+  // Get existing stored proposals to avoid duplicates
+  const existing = await notion(env, `/databases/${TASKS_DB}/query`, 'POST', {
+    filter: { and: [
+      { property: 'Project', select: { equals: 'Gmail' } },
+      { property: 'Klaar', checkbox: { equals: false } },
+    ]},
+    page_size: 50,
+  });
+  const existingGmailIds = new Set(
+    existing.results.map(p => {
+      const op = p.properties.Opmerking?.rich_text?.[0]?.plain_text || '';
+      return op.split('||')[0];
+    })
+  );
+
+  for (const p of proposals) {
+    if (existingGmailIds.has(p.gmailId)) continue;
+    await notion(env, '/pages', 'POST', {
+      parent: { database_id: TASKS_DB },
+      properties: {
+        Taak:      { title: [{ text: { content: p.taskSuggestion } }] },
+        Project:   { select: { name: 'Gmail' } },
+        Opmerking: { rich_text: [{ text: { content: `${p.gmailId}||${p.from}||${p.subject}` } }] },
+      },
+    });
+  }
+}
+
 export default {
+  // Runs every 30 minutes via Cloudflare Cron Trigger
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(collectGmailProposals(env));
+  },
+
   async fetch(request, env) {
     const url = new URL(request.url);
     const pathname = url.pathname;
@@ -208,7 +260,10 @@ export default {
       // GET /tasks
       if (pathname === '/tasks' && method === 'GET') {
         const data = await notion(env, `/databases/${TASKS_DB}/query`, 'POST', {
-          filter: { property: 'Klaar', checkbox: { equals: false } },
+          filter: { and: [
+            { property: 'Klaar', checkbox: { equals: false } },
+            { property: 'Project', select: { does_not_equal: 'Gmail' } },
+          ]},
           sorts: [{ property: 'Deadline', direction: 'ascending' }],
           page_size: 100,
         });
@@ -294,23 +349,55 @@ export default {
         return json({ ok: true });
       }
 
-      // GET /gmail/proposals
+      // GET /gmail/proposals — return stored Notion proposals
       if (pathname === '/gmail/proposals' && method === 'GET') {
-        const proposals = await fetchGmailProposals(env);
-        if (proposals === null) return json({ error: 'not_connected' }, 401);
+        if (!env.NOTION_TOKEN) return json({ error: 'not_connected' }, 401);
+        const data = await notion(env, `/databases/${TASKS_DB}/query`, 'POST', {
+          filter: { and: [
+            { property: 'Project', select: { equals: 'Gmail' } },
+            { property: 'Klaar', checkbox: { equals: false } },
+          ]},
+          sorts: [{ timestamp: 'created_time', direction: 'descending' }],
+          page_size: 20,
+        });
+        const proposals = data.results.map(p => {
+          const op = p.properties.Opmerking?.rich_text?.[0]?.plain_text || '';
+          const [gmailId, from, subject] = op.split('||');
+          return {
+            notionId:       p.id,
+            gmailId:        gmailId || '',
+            from:           from || '',
+            subject:        subject || '',
+            taskSuggestion: p.properties.Taak?.title?.[0]?.plain_text || '',
+          };
+        });
         return json(proposals);
       }
 
-      // POST /gmail/dismiss/:id — mark as read so it won't reappear
-      const dismissMatch = pathname.match(/^\/gmail\/dismiss\/(.+)$/);
+      // POST /gmail/scan — manual trigger for the cron (useful for first run)
+      if (pathname === '/gmail/scan' && method === 'POST') {
+        await collectGmailProposals(env);
+        return json({ ok: true });
+      }
+
+      // POST /gmail/dismiss/:notionId — archive the Notion proposal page
+      const dismissMatch = pathname.match(/^\/gmail\/dismiss\/([a-f0-9-]+)$/);
       if (dismissMatch && method === 'POST') {
-        const token = await getGmailToken(env);
-        if (!token) return json({ error: 'not_connected' }, 401);
-        await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${dismissMatch[1]}/modify`, {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ removeLabelIds: ['UNREAD'] }),
-        });
+        const notionId = dismissMatch[1];
+        // Archive the Notion proposal page
+        await notion(env, `/pages/${notionId}`, 'PATCH', { archived: true });
+        // Also mark Gmail message as read if gmailId provided
+        const body = await request.json().catch(() => ({}));
+        if (body.gmailId) {
+          const token = await getGmailToken(env);
+          if (token) {
+            await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${body.gmailId}/modify`, {
+              method: 'POST',
+              headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify({ removeLabelIds: ['UNREAD'] }),
+            }).catch(() => {});
+          }
+        }
         return json({ ok: true });
       }
 

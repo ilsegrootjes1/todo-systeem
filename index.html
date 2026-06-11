@@ -1140,26 +1140,30 @@ async function loadProposals() {
     el.innerHTML = `<div class="proposals-section">
       <div class="proposals-header">
         <h3>Voorstellen uit mail</h3>
-        <span>${proposals.length} ongelezen</span>
+        <span>${proposals.length} nieuw</span>
       </div>
       ${proposals.map(p => `
-        <div class="proposal-item" id="prop-${p.gmailId}">
+        <div class="proposal-item" id="prop-${p.notionId}">
           <div class="proposal-info">
             <div class="proposal-subject">${esc(p.taskSuggestion)}</div>
             <div class="proposal-from">${esc(p.from)} · ${esc(p.subject)}</div>
           </div>
           <div class="proposal-actions">
-            <button class="btn-proposal-dismiss" data-gmailid="${p.gmailId}">Weigeren</button>
-            <button class="btn-proposal-add" data-task="${esc(p.taskSuggestion)}" data-gmailid="${p.gmailId}">Invoegen</button>
+            <button class="btn-proposal-dismiss" data-notionid="${p.notionId}" data-gmailid="${p.gmailId}">Weigeren</button>
+            <button class="btn-proposal-add" data-task="${esc(p.taskSuggestion)}" data-notionid="${p.notionId}" data-gmailid="${p.gmailId}">Invoegen</button>
           </div>
         </div>`).join('')}
     </div>`;
 
     el.querySelectorAll('.btn-proposal-dismiss').forEach(btn => {
       btn.addEventListener('click', async () => {
-        document.getElementById(`prop-${btn.dataset.gmailid}`)?.remove();
+        document.getElementById(`prop-${btn.dataset.notionid}`)?.remove();
         if (!el.querySelectorAll('.proposal-item').length) el.style.display = 'none';
-        await fetch(`${API}/gmail/dismiss/${btn.dataset.gmailid}`, { method: 'POST' });
+        await fetch(`${API}/gmail/dismiss/${btn.dataset.notionid}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ gmailId: btn.dataset.gmailid }),
+        });
       });
     });
     el.querySelectorAll('.btn-proposal-add').forEach(btn => {
@@ -1167,8 +1171,12 @@ async function loadProposals() {
         document.getElementById('fTaak').value = btn.dataset.task;
         document.getElementById('overlay').classList.add('open');
         setTimeout(() => document.getElementById('fTaak').focus(), 50);
-        await fetch(`${API}/gmail/dismiss/${btn.dataset.gmailid}`, { method: 'POST' });
-        document.getElementById(`prop-${btn.dataset.gmailid}`)?.remove();
+        fetch(`${API}/gmail/dismiss/${btn.dataset.notionid}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ gmailId: btn.dataset.gmailid }),
+        });
+        document.getElementById(`prop-${btn.dataset.notionid}`)?.remove();
         if (!el.querySelectorAll('.proposal-item').length) el.style.display = 'none';
       });
     });

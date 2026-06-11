@@ -987,20 +987,25 @@ function generateTemplate() {
   const g = greeting(selectedContacts);
   const tl = mailTask.toLowerCase();
   const wn = mailWeek ? weekNum(mailWeek) : null;
-  const wi = wn ? `week ${wn} (${weekDates(`Week ${wn}`)})` : '';
+  const wi = wn ? `week ${wn}` : '';
+  const wiLong = wn ? `week ${wn} (${weekDates(`Week ${wn}`)})` : '';
   const link = document.getElementById('mailLink').value.trim();
+  const linkLine = link ? `\n\nJe kan het vinden via: ${link}` : '';
   let body = '';
   if (tl.includes('nieuw menu') || tl.includes('menu maken')) {
-    body = `${g}\n\nIk heb het menu${wi ? ' voor ' + wi : ''} gemaakt. Zou jij hier even naar willen kijken en een go willen geven als het klaar is?`;
+    body = `${g}\n\nIk heb het menu${wi ? ' voor ' + wiLong : ''} gemaakt. Zou jij hier even naar willen kijken en een go willen geven?${linkLine}`;
   } else if (tl.includes('weekmenuflyer') || tl.includes('flyer')) {
-    body = `${g}\n\nDe weekmenuflyer${wi ? ' voor ' + wi : ''} staat klaar voor proofread. Zou jij er even naar willen kijken?`;
+    body = `${g}\n\nDe weekmenuflyer${wi ? ' voor ' + wiLong : ''} staat klaar voor proofread. Zou jij er even naar willen kijken?${linkLine}`;
   } else if (tl.includes('koelkast') || tl.includes('productinformatie')) {
-    body = `${g}\n\nDe productinformatie${wi ? ' voor ' + wi : ''} staat klaar. Zou jij dit even willen controleren?`;
+    body = `${g}\n\nDe productinformatie${wi ? ' voor ' + wiLong : ''} staat klaar. Zou jij dit even willen controleren?${linkLine}`;
+  } else if (tl.includes('retentie ads')) {
+    body = `${g}\n\nIk heb de retentie ads${wi ? ' voor ' + wi : ''} in het mapje gezet.${linkLine}`;
+  } else if (tl.includes('weekmenu post')) {
+    body = `${g}\n\nDe weekmenu post${wi ? ' voor ' + wi : ''} staat klaar in het mapje.${linkLine}`;
   } else {
-    body = `${g}\n\nKunnen jullie even kijken naar: ${mailTask}${wi ? ' (' + wi + ')' : ''}?`;
+    body = `${g}\n\n${mailTask}${wi ? ' voor ' + wi : ''}.${linkLine}`;
   }
-  if (link) body += `\n\n${link}`;
-  body += '\n\nAlvast bedankt!\nIlse';
+  body += '\n\nGroeten,\nIlse';
   return body;
 }
 
@@ -1009,6 +1014,9 @@ function generateSubject() {
   const wn = mailWeek ? ` week ${weekNum(mailWeek)}` : '';
   if (tl.includes('nieuw menu') || tl.includes('menu maken')) return `Go-check: menu${wn}`;
   if (tl.includes('weekmenuflyer') || tl.includes('flyer')) return `Proofread: weekmenuflyer${wn}`;
+  if (tl.includes('retentie ads')) return `Retentie ads${wn}`;
+  if (tl.includes('weekmenu post')) return `Weekmenu post${wn}`;
+  if (tl.includes('koelkast') || tl.includes('productinformatie')) return `Productinformatie koelkast${wn}`;
   return `${mailTask}${wn}`;
 }
 

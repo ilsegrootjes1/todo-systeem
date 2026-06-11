@@ -91,6 +91,22 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 }
 .note-add:hover { color: #9ca3af; }
 
+/* ── Recurring badge ── */
+.recur-badge { display:inline-flex; align-items:center; gap:3px; font-size:10px; font-weight:600; color:#6d28d9; background:#f5f3ff; border-radius:4px; padding:2px 6px; margin-left:4px; }
+
+/* ── Mail proposals ── */
+.proposals-section { background:white; border-radius:12px; border:1px solid #e5e7eb; overflow:hidden; margin-bottom:4px; }
+.proposals-header { display:flex; align-items:center; justify-content:space-between; padding:12px 14px 10px; border-bottom:1px solid #f3f4f6; }
+.proposals-header h3 { font-size:13px; font-weight:700; color:#1a1a1a; }
+.proposals-header span { font-size:11px; color:#9ca3af; }
+.proposal-item { display:flex; align-items:flex-start; gap:10px; padding:10px 14px; border-bottom:1px solid #f9fafb; }
+.proposal-item:last-child { border-bottom:none; }
+.proposal-info { flex:1; min-width:0; }
+.proposal-subject { font-size:13px; font-weight:600; color:#1a1a1a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.proposal-from { font-size:11px; color:#9ca3af; margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.btn-proposal-add { background:#1a1a1a; color:white; border:none; border-radius:7px; padding:5px 11px; font-size:12px; font-weight:600; cursor:pointer; white-space:nowrap; flex-shrink:0; }
+.btn-proposal-add:hover { background:#333; }
+
 /* ── Overzicht ── */
 .overzicht { padding: 16px; max-width: 800px; margin: 0 auto; }
 .ov-scroll { overflow-x: auto; }
@@ -210,6 +226,7 @@ tr:last-child td { border-bottom: none; }
 </div>
 
 <div id="viewTaken">
+  <div class="main" id="mailProposals" style="display:none;max-width:700px;margin:0 auto;padding:12px 16px 0"></div>
   <div class="main" id="takenMain"><div class="empty">Laden...</div></div>
 </div>
 
@@ -241,6 +258,14 @@ tr:last-child td { border-bottom: none; }
       <span id="fWeekHint" style="font-size:11px;color:#9ca3af;margin-left:8px"></span>
     </div>
     <div class="fg"><label>Deadline</label><input type="date" id="fDeadline" /></div>
+    <div class="fg"><label>Herhaling (optioneel)</label>
+      <select id="fHerhaling">
+        <option value="">— Eenmalig —</option>
+        <option value="Wekelijks">Elke week</option>
+        <option value="2 wekelijks">Elke 2 weken</option>
+        <option value="4 wekelijks">Elke 4 weken</option>
+      </select>
+    </div>
     <div class="fg"><label>Opmerking (optioneel)</label><textarea id="fNote" placeholder="Extra info, links..."></textarea></div>
     <div class="modal-btns">
       <button class="btn-cancel" id="btnCancel">Annuleren</button>
@@ -298,11 +323,19 @@ tr:last-child td { border-bottom: none; }
             <option value="Overig">Overig</option>
           </select>
         </div>
-        <div style="display:flex;gap:10px">
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
           <div class="fg" style="margin-bottom:0;flex:0 0 auto"><label>Doelweek</label>
             <input type="number" id="importWeek" min="1" max="52" style="width:90px" />
           </div>
           <div class="fg" style="margin-bottom:0;flex:1"><label>Deadline</label><input type="date" id="importDeadline" /></div>
+        </div>
+        <div class="fg" style="margin-top:8px;margin-bottom:0"><label>Herhaling</label>
+          <select id="importHerhaling">
+            <option value="">— Eenmalig —</option>
+            <option value="Wekelijks">Elke week</option>
+            <option value="2 wekelijks">Elke 2 weken</option>
+            <option value="4 wekelijks">Elke 4 weken</option>
+          </select>
         </div>
       </div>
     </div>
@@ -328,6 +361,14 @@ tr:last-child td { border-bottom: none; }
         <option value="Koelkast">Koelkast</option>
         <option value="Social posts">Social posts</option>
         <option value="Overig">Overig</option>
+      </select>
+    </div>
+    <div class="fg"><label>Herhaling</label>
+      <select id="eHerhaling">
+        <option value="">— Eenmalig —</option>
+        <option value="Wekelijks">Elke week</option>
+        <option value="2 wekelijks">Elke 2 weken</option>
+        <option value="4 wekelijks">Elke 4 weken</option>
       </select>
     </div>
     <div class="fg"><label>Opmerking / link</label><textarea id="eNote" placeholder="bijv. Canva link, extra info..."></textarea></div>
@@ -502,6 +543,7 @@ function taskCard(t) {
         ${t.project ? `<span class="badge ${badgeClass(t.project)}">${esc(t.project)}</span>` : ''}
         ${t.doelweek ? `<span class="doelw">${esc(t.doelweek)}</span>` : ''}
         ${t.deadline ? `<span class="dl${ov?' laat':tod?' today':''}">${fmtDate(t.deadline)}</span>` : ''}
+        ${t.herhaling ? `<span class="recur-badge">↻ ${esc(t.herhaling)}</span>` : ''}
       </div>
       ${t.opmerking
         ? `<div class="task-note" data-editid="${t.id}">
@@ -664,7 +706,7 @@ async function markDone(id, el) {
     await fetch(`${API}/tasks/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ klaar: true, taak: task?.taak, doelweek: task?.doelweek }),
+      body: JSON.stringify({ klaar: true, taak: task?.taak, doelweek: task?.doelweek, deadline: task?.deadline, project: task?.project, opmerking: task?.opmerking, herhaling: task?.herhaling }),
     });
     setTimeout(() => {
       card.classList.add('out');
@@ -719,6 +761,7 @@ function closeModal() {
   document.getElementById('overlay').classList.remove('open');
   ['fTaak','fDeadline','fNote'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('fProject').value = '';
+  document.getElementById('fHerhaling').value = '';
   document.getElementById('fWeek').value = '';
   document.getElementById('fWeekHint').textContent = '';
 }
@@ -734,9 +777,10 @@ async function saveTask() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         taak,
-        project:  document.getElementById('fProject').value  || null,
-        deadline: document.getElementById('fDeadline').value || null,
-        opmerking: document.getElementById('fNote').value.trim() || null,
+        project:   document.getElementById('fProject').value    || null,
+        deadline:  document.getElementById('fDeadline').value   || null,
+        opmerking: document.getElementById('fNote').value.trim()|| null,
+        herhaling: document.getElementById('fHerhaling').value  || null,
       }),
     });
     closeModal();
@@ -758,6 +802,7 @@ function openEditModal(t) {
   document.getElementById('eTaak').value = t.taak || '';
   document.getElementById('eDeadline').value = t.deadline || '';
   document.getElementById('eProject').value = t.project || '';
+  document.getElementById('eHerhaling').value = t.herhaling || '';
   document.getElementById('eNote').value = t.opmerking || '';
   document.getElementById('editOverlay').classList.add('open');
   setTimeout(() => document.getElementById('eNote').focus(), 50);
@@ -772,9 +817,10 @@ document.getElementById('btnEditSave').onclick = async () => {
   const btn = document.getElementById('btnEditSave');
   btn.textContent = 'Opslaan...'; btn.disabled = true;
   const body = {
-    taak:     document.getElementById('eTaak').value.trim(),
-    deadline: document.getElementById('eDeadline').value || null,
-    project:  document.getElementById('eProject').value || null,
+    taak:      document.getElementById('eTaak').value.trim(),
+    deadline:  document.getElementById('eDeadline').value || null,
+    project:   document.getElementById('eProject').value  || null,
+    herhaling: document.getElementById('eHerhaling').value|| null,
     opmerking: document.getElementById('eNote').value.trim() || null,
   };
   try {
@@ -880,8 +926,9 @@ document.getElementById('btnImportAdd').onclick = async () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         taak,
-        project:  document.getElementById('importProject').value || null,
-        deadline: document.getElementById('importDeadline').value || null,
+        project:   document.getElementById('importProject').value   || null,
+        deadline:  document.getElementById('importDeadline').value  || null,
+        herhaling: document.getElementById('importHerhaling').value || null,
       }),
     });
     document.getElementById('mailImportOverlay').classList.remove('open');
@@ -1028,9 +1075,44 @@ function toast(msg) {
   setTimeout(() => el.classList.remove('show'), 2500);
 }
 
+// ── Gmail proposals ──
+async function loadProposals() {
+  const el = document.getElementById('mailProposals');
+  try {
+    const r = await fetch(`${API}/gmail/proposals`);
+    if (r.status === 401) { el.style.display = 'none'; return; }
+    const proposals = await r.json();
+    if (!proposals.length) { el.style.display = 'none'; return; }
+    el.style.display = '';
+    el.innerHTML = `<div class="proposals-section">
+      <div class="proposals-header">
+        <h3>Voorstellen uit mail</h3>
+        <span>${proposals.length} ongelezen</span>
+      </div>
+      ${proposals.map(p => `
+        <div class="proposal-item">
+          <div class="proposal-info">
+            <div class="proposal-subject">${esc(p.subject)}</div>
+            <div class="proposal-from">${esc(p.from)}</div>
+          </div>
+          <button class="btn-proposal-add" data-subject="${esc(p.subject)}">Invoegen</button>
+        </div>`).join('')}
+    </div>`;
+    el.querySelectorAll('.btn-proposal-add').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.getElementById('fTaak').value = btn.dataset.subject;
+        document.getElementById('overlay').classList.add('open');
+        setTimeout(() => document.getElementById('fTaak').focus(), 50);
+      });
+    });
+  } catch { el.style.display = 'none'; }
+}
+
 // ── Init ──
 loadTasks();
+loadProposals();
 setInterval(loadTasks, 5 * 60 * 1000);
+setInterval(loadProposals, 10 * 60 * 1000);
 </script>
 </body>
 </html>

@@ -14,6 +14,9 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 .header h1 { font-size: 19px; font-weight: 700; }
 .subdate { font-size: 12px; color: #b0b0b0; margin-top: 2px; }
 .btn-add { background: #1a1a1a; color: white; border: none; border-radius: 8px; padding: 8px 16px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.btn-mail-import { background: white; color: #1a1a1a; border: 1.5px solid #e5e7eb; border-radius: 8px; padding: 7px 13px; font-size: 13px; font-weight: 600; cursor: pointer; margin-right: 8px; display: flex; align-items: center; gap: 5px; }
+.btn-mail-import:hover { border-color: #1a1a1a; }
+.header-actions { display: flex; align-items: center; }
 
 /* ── Main nav ── */
 .main-nav { display: flex; border-bottom: 1px solid #ebebeb; padding: 0 18px; }
@@ -191,7 +194,13 @@ tr:last-child td { border-bottom: none; }
       <h1>To-do</h1>
       <div class="subdate" id="datum"></div>
     </div>
-    <button class="btn-add" id="btnAdd">+ Nieuw</button>
+    <div class="header-actions">
+      <button class="btn-mail-import" id="btnMailImport">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><polyline points="2,4 12,13 22,4"/></svg>
+        Uit mail
+      </button>
+      <button class="btn-add" id="btnAdd">+ Nieuw</button>
+    </div>
   </div>
   <div class="main-nav">
     <button class="nav-tab active" data-view="taken">Taken</button>
@@ -227,6 +236,10 @@ tr:last-child td { border-bottom: none; }
         <option value="Overig">Overig</option>
       </select>
     </div>
+    <div class="fg"><label>Doelweek (optioneel)</label>
+      <input type="number" id="fWeek" min="1" max="52" placeholder="bijv. 27" style="width:120px" />
+      <span id="fWeekHint" style="font-size:11px;color:#9ca3af;margin-left:8px"></span>
+    </div>
     <div class="fg"><label>Deadline</label><input type="date" id="fDeadline" /></div>
     <div class="fg"><label>Opmerking (optioneel)</label><textarea id="fNote" placeholder="Extra info, links..."></textarea></div>
     <div class="modal-btns">
@@ -260,6 +273,43 @@ tr:last-child td { border-bottom: none; }
     <div class="mail-btns">
       <button class="btn-mail-cancel" id="btnMailCancel">Annuleren</button>
       <button class="btn-mail-send" id="btnMailSend">Verstuur</button>
+    </div>
+  </div>
+</div>
+
+<!-- Mail import modal -->
+<div class="overlay" id="mailImportOverlay">
+  <div class="modal">
+    <h2>Voorstel uit mail</h2>
+    <div class="fg"><label>Plak hier de tekst van je e-mail</label>
+      <textarea id="mailImportText" placeholder="Kopieer de inhoud van je mail en plak hem hier..." style="min-height:140px;resize:vertical"></textarea>
+    </div>
+    <div id="mailImportSuggestions" style="display:none">
+      <div style="font-size:12px;font-weight:600;color:#6b6b6b;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Voorstel</div>
+      <div style="background:#f9fafb;border:1.5px solid #e5e7eb;border-radius:10px;padding:14px 14px 10px">
+        <div class="fg" style="margin-bottom:8px"><label>Taak</label><input type="text" id="importTaak" /></div>
+        <div class="fg" style="margin-bottom:8px"><label>Project</label>
+          <select id="importProject">
+            <option value="">— Geen project —</option>
+            <option value="Weekmenuflyer">Weekmenuflyer</option>
+            <option value="Menuplanning">Menuplanning</option>
+            <option value="Koelkast">Koelkast</option>
+            <option value="Social posts">Social posts</option>
+            <option value="Overig">Overig</option>
+          </select>
+        </div>
+        <div style="display:flex;gap:10px">
+          <div class="fg" style="margin-bottom:0;flex:0 0 auto"><label>Doelweek</label>
+            <input type="number" id="importWeek" min="1" max="52" style="width:90px" />
+          </div>
+          <div class="fg" style="margin-bottom:0;flex:1"><label>Deadline</label><input type="date" id="importDeadline" /></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-btns" style="margin-top:16px">
+      <button class="btn-cancel" id="btnImportCancel">Annuleren</button>
+      <button class="btn-save" id="btnImportAnalyse" style="background:#374151">Analyseer mail</button>
+      <button class="btn-save" id="btnImportAdd" style="display:none">Toevoegen</button>
     </div>
   </div>
 </div>
@@ -378,6 +428,7 @@ document.querySelectorAll('.nav-tab').forEach(btn => {
     document.getElementById('viewOverzicht').style.display = currentView === 'overzicht' ? '' : 'none';
     document.getElementById('projFilters').style.display   = currentView === 'taken' ? 'flex' : 'none';
     document.getElementById('btnAdd').style.display        = currentView === 'taken' ? '' : 'none';
+    document.getElementById('btnMailImport').style.display = currentView === 'taken' ? '' : 'none';
     if (currentView === 'overzicht' && !Object.keys(projects).length) loadProjects();
   });
 });
@@ -637,10 +688,39 @@ document.getElementById('overlay').addEventListener('click', e => {
 document.getElementById('fTaak').addEventListener('keydown', e => { if (e.key === 'Enter') saveTask(); });
 document.getElementById('btnSave').onclick = saveTask;
 
+// ── Doelweek → deadline helper ──
+function thursdayOfMenuWeek(n) {
+  const jan4 = new Date(2026, 0, 4);
+  const jan4Day = jan4.getDay() || 7;
+  const monday = new Date(jan4);
+  monday.setDate(jan4.getDate() - (jan4Day - 1) + (n - 1) * 7);
+  const thu = new Date(monday);
+  thu.setDate(monday.getDate() + 3);
+  return `${thu.getFullYear()}-${String(thu.getMonth()+1).padStart(2,'0')}-${String(thu.getDate()).padStart(2,'0')}`;
+}
+
+document.getElementById('fWeek').addEventListener('input', function() {
+  const n = parseInt(this.value);
+  if (n >= 1 && n <= 52) {
+    const d = thursdayOfMenuWeek(n);
+    document.getElementById('fDeadline').value = d;
+    document.getElementById('fWeekHint').textContent = weekDates(`Week ${n}`);
+  } else {
+    document.getElementById('fWeekHint').textContent = '';
+  }
+});
+
+document.getElementById('importWeek').addEventListener('input', function() {
+  const n = parseInt(this.value);
+  if (n >= 1 && n <= 52) document.getElementById('importDeadline').value = thursdayOfMenuWeek(n);
+});
+
 function closeModal() {
   document.getElementById('overlay').classList.remove('open');
   ['fTaak','fDeadline','fNote'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('fProject').value = '';
+  document.getElementById('fWeek').value = '';
+  document.getElementById('fWeekHint').textContent = '';
 }
 
 async function saveTask() {
@@ -710,6 +790,107 @@ document.getElementById('btnEditSave').onclick = async () => {
     toast('Opslaan mislukt');
   } finally {
     btn.textContent = 'Opslaan'; btn.disabled = false;
+  }
+};
+
+// ── Mail import modal ──
+const NL_MONTHS = {jan:1,feb:2,mrt:3,apr:4,mei:5,jun:6,jul:7,aug:8,sep:9,okt:10,nov:11,dec:12,
+  januari:1,februari:2,maart:3,april:4,mei:5,juni:6,juli:7,augustus:8,september:9,oktober:10,november:11,december:12};
+
+function parseEmail(text) {
+  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+
+  // Task name: subject line preferred, else first real sentence
+  let taskName = '';
+  const subjectLine = lines.find(l => /^(onderwerp|subject)\s*:/i.test(l));
+  taskName = subjectLine ? subjectLine.replace(/^(onderwerp|subject)\s*:\s*/i,'').trim() : (lines[0] || '');
+
+  // Week number
+  let week = null;
+  const wm = text.match(/week\s+(\d+)/i);
+  if (wm) week = parseInt(wm[1]);
+
+  // Deadline: look for "dd maand" or "dd/mm" or "dd-mm"
+  let deadline = '';
+  const dmMatch = text.match(/(\d{1,2})\s+(januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december|jan|feb|mrt|apr|jun|jul|aug|sep|okt|nov|dec)/i);
+  if (dmMatch) {
+    const day = parseInt(dmMatch[1]);
+    const mon = NL_MONTHS[dmMatch[2].toLowerCase()];
+    if (mon) deadline = `2026-${String(mon).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+  } else {
+    const numMatch = text.match(/(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?/);
+    if (numMatch) {
+      const day = parseInt(numMatch[1]), mon = parseInt(numMatch[2]);
+      const yr  = numMatch[3] ? (parseInt(numMatch[3]) < 100 ? 2000+parseInt(numMatch[3]) : parseInt(numMatch[3])) : 2026;
+      deadline = `${yr}-${String(mon).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+    }
+  }
+  if (!deadline && week) deadline = thursdayOfMenuWeek(week);
+
+  // Project from keywords
+  let project = '';
+  const lower = text.toLowerCase();
+  if (lower.includes('flyer')) project = 'Weekmenuflyer';
+  else if (lower.includes('koelkast') || lower.includes('productinformatie') || lower.includes('bestell')) project = 'Koelkast';
+  else if (lower.includes('menu') || lower.includes('import') || lower.includes('menucheck')) project = 'Menuplanning';
+  else if (lower.includes('instagram') || lower.includes('social') || lower.includes('post') || lower.includes('video')) project = 'Social posts';
+
+  return { taskName, week, project, deadline };
+}
+
+document.getElementById('btnMailImport').onclick = () => {
+  document.getElementById('mailImportText').value = '';
+  document.getElementById('mailImportSuggestions').style.display = 'none';
+  document.getElementById('btnImportAdd').style.display = 'none';
+  document.getElementById('btnImportAnalyse').style.display = '';
+  document.getElementById('mailImportOverlay').classList.add('open');
+  setTimeout(() => document.getElementById('mailImportText').focus(), 50);
+};
+
+document.getElementById('btnImportCancel').onclick = () => {
+  document.getElementById('mailImportOverlay').classList.remove('open');
+};
+document.getElementById('mailImportOverlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('mailImportOverlay'))
+    document.getElementById('mailImportOverlay').classList.remove('open');
+});
+
+document.getElementById('btnImportAnalyse').onclick = () => {
+  const text = document.getElementById('mailImportText').value.trim();
+  if (!text) { document.getElementById('mailImportText').focus(); return; }
+  const p = parseEmail(text);
+  document.getElementById('importTaak').value = p.taskName;
+  document.getElementById('importProject').value = p.project;
+  document.getElementById('importWeek').value = p.week || '';
+  document.getElementById('importDeadline').value = p.deadline;
+  document.getElementById('mailImportSuggestions').style.display = '';
+  document.getElementById('btnImportAdd').style.display = '';
+  document.getElementById('btnImportAnalyse').textContent = 'Opnieuw analyseren';
+  document.getElementById('importTaak').focus();
+};
+
+document.getElementById('btnImportAdd').onclick = async () => {
+  const taak = document.getElementById('importTaak').value.trim();
+  if (!taak) { document.getElementById('importTaak').focus(); return; }
+  const btn = document.getElementById('btnImportAdd');
+  btn.textContent = 'Toevoegen...'; btn.disabled = true;
+  try {
+    await fetch(`${API}/tasks`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        taak,
+        project:  document.getElementById('importProject').value || null,
+        deadline: document.getElementById('importDeadline').value || null,
+      }),
+    });
+    document.getElementById('mailImportOverlay').classList.remove('open');
+    toast('Taak toegevoegd vanuit mail!');
+    await loadTasks();
+  } catch {
+    toast('Opslaan mislukt');
+  } finally {
+    btn.textContent = 'Toevoegen'; btn.disabled = false;
   }
 };
 

@@ -104,8 +104,11 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 .proposal-info { flex:1; min-width:0; }
 .proposal-subject { font-size:13px; font-weight:600; color:#1a1a1a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .proposal-from { font-size:11px; color:#9ca3af; margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.btn-proposal-add { background:#1a1a1a; color:white; border:none; border-radius:7px; padding:5px 11px; font-size:12px; font-weight:600; cursor:pointer; white-space:nowrap; flex-shrink:0; }
+.proposal-actions { display:flex; gap:6px; flex-shrink:0; }
+.btn-proposal-add { background:#1a1a1a; color:white; border:none; border-radius:7px; padding:5px 11px; font-size:12px; font-weight:600; cursor:pointer; white-space:nowrap; }
 .btn-proposal-add:hover { background:#333; }
+.btn-proposal-dismiss { background:white; color:#6b7280; border:1.5px solid #e5e7eb; border-radius:7px; padding:5px 9px; font-size:12px; font-weight:600; cursor:pointer; white-space:nowrap; }
+.btn-proposal-dismiss:hover { border-color:#9ca3af; color:#374151; }
 
 /* ── Overzicht ── */
 .overzicht { padding: 16px; max-width: 800px; margin: 0 auto; }
@@ -1090,19 +1093,34 @@ async function loadProposals() {
         <span>${proposals.length} ongelezen</span>
       </div>
       ${proposals.map(p => `
-        <div class="proposal-item">
+        <div class="proposal-item" id="prop-${p.gmailId}">
           <div class="proposal-info">
             <div class="proposal-subject">${esc(p.subject)}</div>
             <div class="proposal-from">${esc(p.from)}</div>
           </div>
-          <button class="btn-proposal-add" data-subject="${esc(p.subject)}">Invoegen</button>
+          <div class="proposal-actions">
+            <button class="btn-proposal-dismiss" data-gmailid="${p.gmailId}">Weigeren</button>
+            <button class="btn-proposal-add" data-subject="${esc(p.subject)}" data-gmailid="${p.gmailId}">Invoegen</button>
+          </div>
         </div>`).join('')}
     </div>`;
+
+    el.querySelectorAll('.btn-proposal-dismiss').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        document.getElementById(`prop-${btn.dataset.gmailid}`)?.remove();
+        if (!el.querySelectorAll('.proposal-item').length) el.style.display = 'none';
+        await fetch(`${API}/gmail/dismiss/${btn.dataset.gmailid}`, { method: 'POST' });
+      });
+    });
     el.querySelectorAll('.btn-proposal-add').forEach(btn => {
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', async () => {
         document.getElementById('fTaak').value = btn.dataset.subject;
         document.getElementById('overlay').classList.add('open');
         setTimeout(() => document.getElementById('fTaak').focus(), 50);
+        // Mark as read so it won't reappear
+        await fetch(`${API}/gmail/dismiss/${btn.dataset.gmailid}`, { method: 'POST' });
+        document.getElementById(`prop-${btn.dataset.gmailid}`)?.remove();
+        if (!el.querySelectorAll('.proposal-item').length) el.style.display = 'none';
       });
     });
   } catch { el.style.display = 'none'; }

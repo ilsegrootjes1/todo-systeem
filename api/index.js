@@ -92,6 +92,7 @@ function formatTask(page) {
     teLaat: page.properties['Te laat'].formula?.string || '',
     opmerking: page.properties.Opmerking.rich_text[0]?.plain_text || '',
     herhaling: page.properties.Herhaling?.select?.name || null,
+    lastEdited: page.last_edited_time || null,
   };
 }
 
@@ -123,12 +124,8 @@ async function getGmailToken(env) {
   return data.access_token || null;
 }
 
-// Only match explicit action requests directed at the reader (no bare ? — too broad)
-const ACTION_RE = /\b(kun jij|kan jij|kan je|kun je|wil jij|wil je|zou jij|zou je|heb jij|heb je|graag|actie vereist|follow.?up|could you|can you|would you|please|action required|need you|let me know|laat.{0,5}weten|kunt jij|zorg jij|zorg je|stuur jij|stuur je|check jij|check je|kijk jij|kijk je|kun jij even|kan jij even|even sturen|even kijken|even regelen)\b/i;
-
-// Skip automated/transactional senders and subjects
-const SKIP_FROM_RE    = /noreply|no-reply|donotreply|mailer-daemon|notification|updates@|support@|info@|hello@/i;
-const SKIP_SUBJECT_RE = /order|bestelling|levering|delivery|factuur|invoice|receipt|bevestiging|tracking|shipment|bezorging|automatisch|do not reply|je bent uitgenodigd|nieuwsbrief|newsletter/i;
+// Hard skip: truly automated senders (never personal)
+const SKIP_FROM_RE = /noreply|no-reply|donotreply|mailer-daemon|notification@|updates@/i;
 
 function extractBodyText(payload) {
   if (!payload) return '';
@@ -145,25 +142,46 @@ function extractBodyText(payload) {
   return '';
 }
 
-function extractTaskSuggestion(bodyText) {
-  // Strip quoted/forwarded sections before scanning
-  const clean = bodyText
-    .replace(/^(Op |On |Van:|From:|>).*/gm, '')
-    .replace(/^-{3,}.*/gm, '')
-    .replace(/\[afbeelding\]|\[image\]/gi, '');
+// Calls Claude Haiku to understand the email and suggest a task if relevant
+async function analyzeEmail(env, subject, from, bodyText) {
+  if (!env.ANTHROPIC_API_KEY) return null;
 
-  const lines = clean
-    .split(/[\n]+/)
-    .map(s => s.trim())
-    .filter(s => s.length > 15 && s.length < 200)
-    .filter(s => !/^[>|]/.test(s));
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'x-api-key': env.ANTHROPIC_API_KEY,
+      'anthropic-version': '2023-06-01',
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'claude-haiku-4-5',
+      max_tokens: 250,
+      messages: [{
+        role: 'user',
+        content: `Je analyseert e-mails voor Ilse, eigenaar van ThuysVers (maaltijdleveringsbedrijf).
 
-  for (const line of lines) {
-    if (ACTION_RE.test(line)) {
-      return line.replace(/^[\s>*#\-–]+/, '').replace(/\s+/g, ' ').trim().slice(0, 100);
-    }
+Van: ${from}
+Onderwerp: ${subject}
+Bericht (eerste deel):
+${bodyText.slice(0, 2000)}
+
+Bepaal of er een concrete actie voor Ilse in zit. Antwoord ALLEEN met dit JSON-object, niets anders:
+{"isActionable":true/false,"taskTitle":"korte taak max 80 tekens of null","summary":"1-2 zinnen wat er in de mail staat en wat Ilse moet doen"}`,
+      }],
+    }),
+  });
+
+  if (!res.ok) return null;
+  const data = await res.json();
+  const text = data.content?.[0]?.text?.trim();
+  if (!text) return null;
+
+  try {
+    const m = text.match(/\{[\s\S]*\}/);
+    return m ? JSON.parse(m[0]) : null;
+  } catch {
+    return null;
   }
-  return null;
 }
 
 async function fetchGmailProposals(env) {
@@ -195,17 +213,22 @@ async function fetchGmailProposals(env) {
 
     if (unsub) continue;
     if (SKIP_FROM_RE.test(from)) continue;
-    if (SKIP_SUBJECT_RE.test(subject)) continue;
 
     const key = subject.toLowerCase().replace(/^(re:|fwd?:)\s*/i, '').replace(/\s+/g, '').slice(0, 40);
     if (seenSubjects.has(key)) continue;
     seenSubjects.add(key);
 
-    const bodyText = extractBodyText(msgData.payload).slice(0, 4000);
-    const taskSuggestion = extractTaskSuggestion(bodyText);
-    if (!taskSuggestion) continue;
+    const bodyText = extractBodyText(msgData.payload);
+    const analysis = await analyzeEmail(env, subject, from, bodyText);
+    if (!analysis?.isActionable) continue;
 
-    proposals.push({ gmailId: msg.id, subject, from, taskSuggestion });
+    proposals.push({
+      gmailId: msg.id,
+      subject,
+      from,
+      taskSuggestion: analysis.taskTitle || subject.slice(0, 80),
+      summary: analysis.summary || '',
+    });
   }
   return proposals;
 }
@@ -237,7 +260,7 @@ async function collectGmailProposals(env) {
       properties: {
         Taak:      { title: [{ text: { content: p.taskSuggestion } }] },
         Project:   { select: { name: 'Gmail' } },
-        Opmerking: { rich_text: [{ text: { content: `${p.gmailId}||${p.from}||${p.subject}` } }] },
+        Opmerking: { rich_text: [{ text: { content: `${p.gmailId}||${p.from}||${p.subject}||${p.summary || ''}`.slice(0, 2000) } }] },
       },
     });
   }
@@ -263,6 +286,16 @@ export default {
           filter: { property: 'Klaar', checkbox: { equals: false } },
           sorts: [{ property: 'Deadline', direction: 'ascending' }],
           page_size: 100,
+        });
+        return json(data.results.map(formatTask).filter(t => t.project !== 'Gmail'));
+      }
+
+      // GET /tasks/recent — recently completed tasks
+      if (pathname === '/tasks/recent' && method === 'GET') {
+        const data = await notion(env, `/databases/${TASKS_DB}/query`, 'POST', {
+          filter: { property: 'Klaar', checkbox: { equals: true } },
+          sorts: [{ timestamp: 'last_edited_time', direction: 'descending' }],
+          page_size: 50,
         });
         return json(data.results.map(formatTask).filter(t => t.project !== 'Gmail'));
       }
@@ -359,12 +392,15 @@ export default {
         });
         const proposals = data.results.map(p => {
           const op = p.properties.Opmerking?.rich_text?.[0]?.plain_text || '';
-          const [gmailId, from, subject] = op.split('||');
+          const parts = op.split('||');
+          const [gmailId, from, subject, ...summaryParts] = parts;
+          const summary = summaryParts.join('||');
           return {
             notionId:       p.id,
             gmailId:        gmailId || '',
             from:           from || '',
             subject:        subject || '',
+            summary:        summary || '',
             taskSuggestion: p.properties.Taak?.title?.[0]?.plain_text || '',
           };
         });

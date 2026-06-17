@@ -562,7 +562,7 @@ document.querySelectorAll('.nav-tab').forEach(btn => {
     document.getElementById('projFilters').style.display     = currentView === 'taken'      ? 'flex' : 'none';
     document.getElementById('btnAdd').style.display          = currentView === 'taken'      ? '' : 'none';
     document.getElementById('btnMailImport').style.display   = currentView === 'taken'      ? '' : 'none';
-    if (currentView === 'overzicht' && !Object.keys(projects).length) loadProjects();
+    if (currentView === 'overzicht') loadProjects();
     if (currentView === 'geschiedenis') loadRecent();
   });
 });
@@ -747,10 +747,10 @@ function renderOverzicht() {
           const weight = late ? '700' : '400';
           nextLine = `<div style="font-size:10px;color:${color};font-weight:${weight};margin-top:3px;white-space:nowrap">${esc(nextStatus.toLowerCase())} — ${dl.getDate()} ${MS[dl.getMonth()]}</div>`;
         }
-        return `<td><span class="status-badge ${statusClass(s)}" data-proj="${k}" data-id="${entry.id}" onclick="openStatusMenu(event,this)">${esc(s)}</span>${nextLine}</td>`;
+        return `<td><span class="status-badge ${statusClass(s)}" data-proj="${k}" data-id="${entry.id}" data-week="Week ${wn}" onclick="openStatusMenu(event,this)">${esc(s)}</span>${nextLine}</td>`;
       }
-      if (isPast || isCurrent) return `<td><span class="status-badge s-green">Klaar</span></td>`;
-      return `<td><span class="status-badge empty" data-proj="${k}" data-id="" onclick="openStatusMenu(event,this)">—</span></td>`;
+      if (isPast || isCurrent) return `<td><span class="status-badge s-green" data-proj="${k}" data-id="" data-week="Week ${wn}" onclick="openStatusMenu(event,this)" style="cursor:pointer">Klaar</span></td>`;
+      return `<td><span class="status-badge empty" data-proj="${k}" data-id="" data-week="Week ${wn}" onclick="openStatusMenu(event,this)">—</span></td>`;
     }).join('');
 
     const rowStyleParts = [];
@@ -820,6 +820,7 @@ function openStatusMenu(e, el) {
   e.stopPropagation();
   const proj = el.dataset.proj;
   const id   = el.dataset.id;
+  const week = el.dataset.week || '';
   const options = STATUS_OPTIONS[proj] || [];
 
   const menu = document.getElementById('statusMenu');
@@ -831,7 +832,7 @@ function openStatusMenu(e, el) {
   menu.style.top  = (rect.bottom + 6) + 'px';
   menu.style.left = rect.left + 'px';
   menu.style.display = 'block';
-  statusMenuTarget = { id, el, proj };
+  statusMenuTarget = { id, el, proj, week };
 
   menu.querySelectorAll('.status-option').forEach(opt => {
     opt.addEventListener('click', () => setStatus(opt.dataset.status));
@@ -839,25 +840,37 @@ function openStatusMenu(e, el) {
 }
 
 async function setStatus(newStatus) {
-  const { id, el, proj } = statusMenuTarget;
+  const { id, el, proj, week } = statusMenuTarget;
   document.getElementById('statusMenu').style.display = 'none';
-  if (!id) return;
 
   const prev = el.textContent;
   const prevClass = el.className;
   el.textContent = newStatus;
   el.className = `status-badge ${statusClass(newStatus)}`;
 
-  const arr = projects[proj];
-  const entry = arr.find(e => e.id === id);
-  if (entry) entry.status = newStatus;
-
   try {
-    await fetch(`${API}/projects/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: newStatus }),
-    });
+    if (!id) {
+      // Entry bestaat nog niet in Notion → aanmaken
+      const r = await fetch(`${API}/projects`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ proj, week, status: newStatus }),
+      });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error || 'Aanmaken mislukt');
+      el.dataset.id = data.id;
+      if (!projects[proj]) projects[proj] = [];
+      projects[proj].push({ id: data.id, week, status: newStatus, titlePropName: data.titlePropName, opmerking: '' });
+    } else {
+      const arr = projects[proj];
+      const entry = arr?.find(e => e.id === id);
+      if (entry) entry.status = newStatus;
+      await fetch(`${API}/projects/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+    }
     toast('Status bijgewerkt');
   } catch {
     el.textContent = prev;

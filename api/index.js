@@ -39,12 +39,16 @@ async function maybeUpdateProjectStatus(env, taskName, doelweek) {
   const lower = taskName.toLowerCase();
   const rule = STATUS_RULES.find(r => lower.includes(r.match));
   if (!rule) return;
-  const weekLower = doelweek.toLowerCase().trim();
+  const wMatch = doelweek.match(/\d+/);
+  if (!wMatch) return;
+  const targetWeekNum = parseInt(wMatch[0]);
   await Promise.all(rule.updates.map(async ({ db, status }) => {
-    const data = await notion(env, `/databases/${db}/query`, 'POST', { page_size: 30 });
+    const data = await notion(env, `/databases/${db}/query`, 'POST', { page_size: 100 });
     const entry = data.results.find(p => {
       const tp = Object.values(p.properties).find(x => x.type === 'title');
-      return tp?.title?.[0]?.plain_text?.toLowerCase().trim() === weekLower;
+      const title = tp?.title?.[0]?.plain_text || '';
+      const m = title.match(/\d+/);
+      return m && parseInt(m[0]) === targetWeekNum;
     });
     if (entry) {
       await notion(env, `/pages/${entry.id}`, 'PATCH', {
@@ -554,16 +558,39 @@ export default {
 
       // GET /projects
       if (pathname === '/projects' && method === 'GET') {
+        async function queryAll(db) {
+          let results = [], cursor;
+          do {
+            const body = { page_size: 100, sorts: [{ timestamp: 'created_time', direction: 'ascending' }] };
+            if (cursor) body.start_cursor = cursor;
+            const data = await notion(env, `/databases/${db}/query`, 'POST', body);
+            results.push(...data.results);
+            cursor = data.has_more ? data.next_cursor : null;
+          } while (cursor);
+          return results;
+        }
         const [wmf, kk, mp] = await Promise.all([
-          notion(env, `/databases/${WMF_DB}/query`,      'POST', { sorts: [{ timestamp: 'created_time', direction: 'ascending' }], page_size: 30 }),
-          notion(env, `/databases/${KOELKAST_DB}/query`, 'POST', { sorts: [{ timestamp: 'created_time', direction: 'ascending' }], page_size: 30 }),
-          notion(env, `/databases/${MENU_DB}/query`,     'POST', { sorts: [{ timestamp: 'created_time', direction: 'ascending' }], page_size: 30 }),
+          queryAll(WMF_DB), queryAll(KOELKAST_DB), queryAll(MENU_DB),
         ]);
         return json({
-          weekmenuflyer: wmf.results.map(formatProjectEntry),
-          koelkast:      kk.results.map(formatProjectEntry),
-          menuplanning:  mp.results.map(formatProjectEntry),
+          weekmenuflyer: wmf.map(formatProjectEntry),
+          koelkast:      kk.map(formatProjectEntry),
+          menuplanning:  mp.map(formatProjectEntry),
         });
+      }
+
+      // POST /projects — create new week entry
+      if (pathname === '/projects' && method === 'POST') {
+        const body = await request.json();
+        const DB_MAP = { weekmenuflyer: WMF_DB, koelkast: KOELKAST_DB, menuplanning: MENU_DB };
+        const db = DB_MAP[body.proj];
+        if (!db) return json({ error: 'Onbekend project' }, 400);
+        const dbMeta = await notion(env, `/databases/${db}`);
+        const titlePropName = Object.entries(dbMeta.properties).find(([, v]) => v.type === 'title')?.[0] || 'Name';
+        const props = { [titlePropName]: { title: [{ text: { content: body.week } }] } };
+        if (body.status) props.Status = { select: { name: body.status } };
+        const page = await notion(env, '/pages', 'POST', { parent: { database_id: db }, properties: props });
+        return json({ id: page.id, titlePropName });
       }
 
       // PATCH /projects/:id

@@ -303,6 +303,20 @@ tr:last-child td { border-bottom: none; }
   </div>
 </div>
 
+<!-- Project entry edit modal -->
+<div class="overlay" id="projEntryOverlay">
+  <div class="modal">
+    <h2 id="projEntryTitle">Projectregel bewerken</h2>
+    <div class="fg"><label>Naam</label><input type="text" id="peNaam" /></div>
+    <div class="fg"><label>Status</label><select id="peStatus"></select></div>
+    <div class="fg"><label>Opmerking (optioneel)</label><textarea id="peOpmerking" placeholder="Extra info, link..."></textarea></div>
+    <div class="modal-btns">
+      <button class="btn-cancel" id="btnProjEntryCancel">Annuleren</button>
+      <button class="btn-save" id="btnProjEntrySave">Opslaan</button>
+    </div>
+  </div>
+</div>
+
 <!-- Status dropdown -->
 <div class="status-menu" id="statusMenu" style="display:none"></div>
 
@@ -684,8 +698,14 @@ function renderOverzicht() {
       </tr>`);
     }
 
+    // Collect entry IDs for this row so the week cell can open the edit modal
+    const rowEntries = ['weekmenuflyer','menuplanning','koelkast'].map(k => {
+      const e = map[k][wn];
+      return e ? `${k}:${e.id}` : '';
+    }).filter(Boolean).join(',');
+
     rows.push(`<tr${rowClass ? ` class="${rowClass}"` : ''} style="${isFarPast || isFarFuture ? 'display:none' : ''}">
-      <td class="week-cell${isCurrent ? ' current' : ''}">
+      <td class="week-cell${isCurrent ? ' current' : ''}" style="cursor:pointer" onclick="openProjRowMenu(event,${wn},'${rowEntries}')" title="Bewerken">
         <div>Week ${wn}</div>
         <div style="font-size:10px;color:#bbb;font-weight:400;margin-top:1px">${weekDates(`Week ${wn}`)}</div>
       </td>
@@ -1391,6 +1411,103 @@ async function loadDoneTasks() {
     doneTasks = await r.json();
   } catch { doneTasks = []; }
 }
+
+// ── Project entry edit modal ──
+let projEntryTarget = null; // { proj, entry }
+
+const PROJ_LABELS = { weekmenuflyer: 'Weekmenuflyer', menuplanning: 'Menuplanning', koelkast: 'Koelkast' };
+
+function openProjRowMenu(e, wn, entryStr) {
+  // Pick which project to edit: show a small picker if multiple exist, else open directly
+  const entries = entryStr.split(',').map(s => {
+    const [proj, id] = s.split(':');
+    return { proj, id };
+  });
+
+  if (entries.length === 0) return;
+
+  // If only one project has an entry for this week, open it directly
+  // Otherwise ask which project
+  if (entries.length === 1) {
+    const { proj, id } = entries[0];
+    const entry = (projects[proj] || []).find(x => x.id === id);
+    if (entry) openProjEntryModal(proj, entry);
+  } else {
+    // Build a small inline picker
+    const menu = document.getElementById('statusMenu');
+    menu.innerHTML = entries.map(({ proj, id }) =>
+      `<div class="status-option" data-proj="${proj}" data-id="${id}">${PROJ_LABELS[proj] || proj}</div>`
+    ).join('');
+    const rect = e.currentTarget.getBoundingClientRect();
+    menu.style.top  = (rect.bottom + 4) + 'px';
+    menu.style.left = rect.left + 'px';
+    menu.style.display = 'block';
+    menu.querySelectorAll('.status-option').forEach(opt => {
+      opt.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        menu.style.display = 'none';
+        const entry = (projects[opt.dataset.proj] || []).find(x => x.id === opt.dataset.id);
+        if (entry) openProjEntryModal(opt.dataset.proj, entry);
+      });
+    });
+  }
+  e.stopPropagation();
+}
+
+function openProjEntryModal(proj, entry) {
+  projEntryTarget = { proj, entry };
+  document.getElementById('projEntryTitle').textContent = `${PROJ_LABELS[proj]} — ${entry.week}`;
+
+  document.getElementById('peNaam').value      = entry.week || '';
+  document.getElementById('peOpmerking').value = entry.opmerking || '';
+
+  const sel = document.getElementById('peStatus');
+  const opts = STATUS_OPTIONS[proj] || [];
+  sel.innerHTML = '<option value="">— Geen status —</option>' +
+    opts.map(s => `<option value="${esc(s)}"${entry.status === s ? ' selected' : ''}>${esc(s)}</option>`).join('');
+
+  document.getElementById('projEntryOverlay').classList.add('open');
+  setTimeout(() => document.getElementById('peNaam').focus(), 50);
+}
+
+document.getElementById('btnProjEntryCancel').onclick = () =>
+  document.getElementById('projEntryOverlay').classList.remove('open');
+document.getElementById('projEntryOverlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('projEntryOverlay'))
+    document.getElementById('projEntryOverlay').classList.remove('open');
+});
+
+document.getElementById('btnProjEntrySave').onclick = async () => {
+  if (!projEntryTarget) return;
+  const btn = document.getElementById('btnProjEntrySave');
+  btn.textContent = 'Opslaan...'; btn.disabled = true;
+
+  const { proj, entry } = projEntryTarget;
+  const naam      = document.getElementById('peNaam').value.trim();
+  const status    = document.getElementById('peStatus').value || null;
+  const opmerking = document.getElementById('peOpmerking').value.trim() || null;
+
+  try {
+    await fetch(`${API}/projects/${entry.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ naam, titlePropName: entry.titlePropName, status, opmerking }),
+    });
+
+    // Update local data
+    entry.week      = naam;
+    entry.status    = status;
+    entry.opmerking = opmerking;
+
+    document.getElementById('projEntryOverlay').classList.remove('open');
+    renderOverzicht();
+    toast('Opgeslagen');
+  } catch {
+    toast('Opslaan mislukt');
+  } finally {
+    btn.textContent = 'Opslaan'; btn.disabled = false;
+  }
+};
 
 // ── Init ──
 loadTasks();

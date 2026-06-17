@@ -98,10 +98,11 @@ function formatTask(page) {
 }
 
 function formatProjectEntry(page) {
-  const titleProp = Object.values(page.properties).find(p => p.type === 'title');
+  const titleEntry = Object.entries(page.properties).find(([, v]) => v.type === 'title');
   return {
     id: page.id,
-    week: titleProp?.title?.[0]?.plain_text || '',
+    week: titleEntry?.[1]?.title?.[0]?.plain_text || '',
+    titlePropName: titleEntry?.[0] || 'Name',
     status: page.properties.Status?.select?.name || null,
     statusColor: page.properties.Status?.select?.color || null,
     opmerking: page.properties.Opmerking?.rich_text?.[0]?.plain_text || '',
@@ -571,8 +572,11 @@ export default {
         const id = projMatch[1];
         const body = await request.json();
         const properties = {};
-        if (body.status !== undefined)   properties.Status    = body.status   ? { select: { name: body.status } }   : { select: null };
+        if (body.status !== undefined)    properties.Status    = body.status   ? { select: { name: body.status } }   : { select: null };
         if (body.opmerking !== undefined) properties.Opmerking = { rich_text: body.opmerking ? [{ text: { content: body.opmerking } }] : [] };
+        if (body.naam !== undefined && body.titlePropName) {
+          properties[body.titlePropName] = { title: [{ text: { content: body.naam } }] };
+        }
         await notion(env, `/pages/${id}`, 'PATCH', { properties });
         return json({ ok: true });
       }

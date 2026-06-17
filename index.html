@@ -14,8 +14,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 .header h1 { font-size: 19px; font-weight: 700; }
 .subdate { font-size: 12px; color: #b0b0b0; margin-top: 2px; }
 .btn-add { background: #1a1a1a; color: white; border: none; border-radius: 8px; padding: 8px 16px; font-size: 13px; font-weight: 600; cursor: pointer; }
-.btn-mail-import { background: white; color: #1a1a1a; border: 1.5px solid #e5e7eb; border-radius: 8px; padding: 7px 13px; font-size: 13px; font-weight: 600; cursor: pointer; margin-right: 8px; display: flex; align-items: center; gap: 5px; }
-.btn-mail-import:hover { border-color: #1a1a1a; }
+.btn-icon { background: white; color: #9ca3af; border: 1.5px solid #e5e7eb; border-radius: 8px; padding: 7px 10px; font-size: 13px; font-weight: 600; cursor: pointer; margin-right: 6px; display: flex; align-items: center; gap: 5px; transition: all 0.12s; }
+.btn-icon:hover { border-color: #1a1a1a; color: #1a1a1a; }
 .header-actions { display: flex; align-items: center; }
 
 /* ── Main nav ── */
@@ -40,7 +40,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 
 /* ── Task card ── */
 .task { background: white; border-radius: 10px; padding: 12px 13px; margin-bottom: 5px; display: flex; gap: 11px; border: 1px solid #f0f0ee; transition: opacity 0.3s, transform 0.3s; }
-.task.ov { background: #fff8f8; border-color: #fde8e8; }
+.task.ov  { background: #fff8f8; border-color: #fde8e8; }
 .task.tod { background: #fffcf4; border-color: #fef3c7; }
 .task.out { opacity: 0; transform: translateX(16px); }
 
@@ -52,43 +52,15 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 .task-name { font-size: 14px; font-weight: 500; line-height: 1.35; margin-bottom: 4px; }
 .task-meta { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
 .badge { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.02em; }
-.b-weekmenuflyer { background: #dbeafe; color: #1d4ed8; }
-.b-menuplanning  { background: #ede9fe; color: #6d28d9; }
-.b-koelkast      { background: #ffedd5; color: #c2410c; }
-.b-social        { background: #fce7f3; color: #be185d; }
-.b-overig        { background: #f3f4f6; color: #6b7280; }
 .doelw { font-size: 11px; color: #aaa; }
 .dl { font-size: 11px; color: #aaa; margin-left: auto; }
 .dl.laat  { color: #f87171; font-weight: 700; }
 .dl.today { color: #fb923c; font-weight: 700; }
-.task-note {
-  display: flex;
-  align-items: flex-start;
-  gap: 5px;
-  margin-top: 6px;
-  cursor: pointer;
-  padding: 5px 8px;
-  background: #f8f8f6;
-  border-radius: 6px;
-  border-left: 2px solid #e5e5e5;
-  transition: background 0.15s;
-}
+.task-note { display: flex; align-items: flex-start; gap: 5px; margin-top: 6px; cursor: pointer; padding: 5px 8px; background: #f8f8f6; border-radius: 6px; border-left: 2px solid #e5e5e5; transition: background 0.15s; }
 .task-note:hover { background: #f0f0ee; }
 .task-note svg { flex-shrink: 0; margin-top: 1px; color: #9ca3af; }
 .task-note-text { font-size: 12px; color: #6b7280; line-height: 1.4; word-break: break-word; }
-.note-add {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  margin-top: 5px;
-  font-size: 11px;
-  color: #d1d5db;
-  cursor: pointer;
-  background: none;
-  border: none;
-  padding: 2px 0;
-  transition: color 0.15s;
-}
+.note-add { display: inline-flex; align-items: center; gap: 4px; margin-top: 5px; font-size: 11px; color: #d1d5db; cursor: pointer; background: none; border: none; padding: 2px 0; transition: color 0.15s; }
 .note-add:hover { color: #9ca3af; }
 
 /* ── Recurring badge ── */
@@ -122,17 +94,10 @@ tr:last-child td { border-bottom: none; }
 .week-cell.current { color: #1a1a1a; }
 .current-week-row td { border-bottom: 2.5px solid #ef4444; }
 
-.status-badge {
-  display: inline-block;
-  padding: 4px 10px;
-  border-radius: 6px;
-  font-size: 11px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-.status-badge.empty { background: #f3f4f6; color: #c4c4c4; font-style: italic; }
+.status-badge { display: inline-block; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; white-space: nowrap; cursor: pointer; }
+.status-badge.empty { background: #f3f4f6; color: #c4c4c4; font-style: italic; cursor: pointer; }
+.status-badge.empty:hover { background: #e5e7eb; }
 
-/* Status colors */
 .s-green  { background: #dcfce7; color: #15803d; }
 .s-blue   { background: #dbeafe; color: #1d4ed8; }
 .s-purple { background: #ede9fe; color: #6d28d9; }
@@ -142,29 +107,14 @@ tr:last-child td { border-bottom: none; }
 .s-sky    { background: #e0f2fe; color: #0369a1; }
 
 /* ── Status dropdown ── */
-.status-menu {
-  position: fixed;
-  background: white;
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
-  padding: 6px;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
-  z-index: 300;
-  min-width: 200px;
-}
-.status-option {
-  padding: 8px 12px;
-  border-radius: 6px;
-  font-size: 13px;
-  cursor: pointer;
-  font-weight: 500;
-}
+.status-menu { position: fixed; background: white; border: 1px solid #e5e7eb; border-radius: 10px; padding: 6px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); z-index: 300; min-width: 200px; }
+.status-option { padding: 8px 12px; border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: 500; }
 .status-option:hover { background: #f5f5f3; }
 
 /* ── Modal ── */
 .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 200; display: none; align-items: flex-end; justify-content: center; }
 .overlay.open { display: flex; }
-.modal { background: white; border-radius: 20px 20px 0 0; padding: 24px 18px 44px; width: 100%; max-width: 700px; animation: up 0.22s ease; }
+.modal { background: white; border-radius: 20px 20px 0 0; padding: 24px 18px 44px; width: 100%; max-width: 700px; animation: up 0.22s ease; max-height: 90vh; overflow-y: auto; }
 @keyframes up { from { transform: translateY(100%); } to { transform: translateY(0); } }
 .modal h2 { font-size: 16px; font-weight: 700; margin-bottom: 18px; }
 .fg { margin-bottom: 13px; }
@@ -176,11 +126,27 @@ tr:last-child td { border-bottom: none; }
 .btn-save { flex: 1; background: #1a1a1a; color: white; border: none; border-radius: 10px; padding: 13px; font-size: 14px; font-weight: 600; cursor: pointer; }
 .btn-save:disabled { opacity: 0.5; cursor: not-allowed; }
 .btn-cancel { background: #f3f4f6; color: #6b7280; border: none; border-radius: 10px; padding: 13px 18px; font-size: 14px; font-weight: 600; cursor: pointer; }
+.btn-delete-task { width: 100%; background: none; color: #f87171; border: 1.5px solid #fecaca; border-radius: 10px; padding: 11px; font-size: 13px; font-weight: 600; cursor: pointer; margin-top: 10px; transition: all 0.12s; }
+.btn-delete-task:hover { background: #fef2f2; border-color: #f87171; }
+
+/* ── Settings modal ── */
+.settings-list { margin-bottom: 16px; }
+.settings-proj-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid #f5f5f3; }
+.settings-proj-row:last-child { border-bottom: none; }
+.settings-proj-name { flex: 1; font-size: 13px; color: #374151; font-weight: 500; }
+.settings-proj-system { font-size: 11px; color: #d1d5db; }
+.btn-proj-del { background: none; border: none; color: #fca5a5; font-size: 12px; font-weight: 600; cursor: pointer; padding: 4px 8px; border-radius: 6px; transition: all 0.12s; }
+.btn-proj-del:hover { color: #ef4444; background: #fef2f2; }
+.new-proj-row { display: flex; gap: 8px; margin-top: 4px; }
+.new-proj-row input { flex: 1; border: 1.5px solid #e5e7eb; border-radius: 8px; padding: 9px 11px; font-size: 14px; font-family: inherit; outline: none; }
+.new-proj-row input:focus { border-color: #1a1a1a; }
+.btn-proj-add { background: #1a1a1a; color: white; border: none; border-radius: 8px; padding: 9px 16px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.btn-proj-add:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* ── Mail modal ── */
 .mail-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 300; display: none; align-items: center; justify-content: center; padding: 20px; }
 .mail-overlay.open { display: flex; }
-.mail-modal { background: white; border-radius: 16px; padding: 22px 20px 24px; width: 100%; max-width: 420px; }
+.mail-modal { background: white; border-radius: 16px; padding: 22px 20px 24px; width: 100%; max-width: 420px; max-height: 90vh; overflow-y: auto; }
 .mail-modal h3 { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
 .mail-subtitle { font-size: 12px; color: #aaa; margin-bottom: 16px; }
 .contacts { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
@@ -233,7 +199,10 @@ tr:last-child td { border-bottom: none; }
       <div class="subdate" id="datum"></div>
     </div>
     <div class="header-actions">
-      <button class="btn-mail-import" id="btnMailImport">
+      <button class="btn-icon" id="btnSettings" title="Projecten beheren">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </button>
+      <button class="btn-icon" id="btnMailImport">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><polyline points="2,4 12,13 22,4"/></svg>
         Uit mail
       </button>
@@ -270,16 +239,7 @@ tr:last-child td { border-bottom: none; }
   <div class="modal">
     <h2>Nieuwe taak</h2>
     <div class="fg"><label>Taak</label><input type="text" id="fTaak" placeholder="Wat moet je doen?" /></div>
-    <div class="fg"><label>Project</label>
-      <select id="fProject">
-        <option value="">— Geen project —</option>
-        <option value="Weekmenuflyer">Weekmenuflyer</option>
-        <option value="Menuplanning">Menuplanning</option>
-        <option value="Koelkast">Koelkast</option>
-        <option value="Social posts">Social posts</option>
-        <option value="Overig">Overig</option>
-      </select>
-    </div>
+    <div class="fg"><label>Project</label><select id="fProject"><option value="">— Geen project —</option></select></div>
     <div class="fg"><label>Doelweek (optioneel)</label>
       <input type="number" id="fWeek" min="1" max="52" placeholder="bijv. 27" style="width:120px" />
       <span id="fWeekHint" style="font-size:11px;color:#9ca3af;margin-left:8px"></span>
@@ -297,6 +257,48 @@ tr:last-child td { border-bottom: none; }
     <div class="modal-btns">
       <button class="btn-cancel" id="btnCancel">Annuleren</button>
       <button class="btn-save" id="btnSave">Opslaan in Notion</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit task modal -->
+<div class="overlay" id="editOverlay">
+  <div class="modal">
+    <h2>Taak bewerken</h2>
+    <div class="fg"><label>Taak</label><input type="text" id="eTaak" /></div>
+    <div class="fg"><label>Deadline</label><input type="date" id="eDeadline" /></div>
+    <div class="fg"><label>Project</label><select id="eProject"><option value="">— Geen project —</option></select></div>
+    <div class="fg"><label>Herhaling</label>
+      <select id="eHerhaling">
+        <option value="">— Eenmalig —</option>
+        <option value="Wekelijks">Elke week</option>
+        <option value="2 wekelijks">Elke 2 weken</option>
+        <option value="4 wekelijks">Elke 4 weken</option>
+      </select>
+    </div>
+    <div class="fg"><label>Opmerking / link</label><textarea id="eNote" placeholder="bijv. Canva link, extra info..."></textarea></div>
+    <div class="modal-btns">
+      <button class="btn-cancel" id="btnEditCancel">Annuleren</button>
+      <button class="btn-save" id="btnEditSave">Opslaan</button>
+    </div>
+    <button class="btn-delete-task" id="btnEditDelete">Taak verwijderen</button>
+  </div>
+</div>
+
+<!-- Settings modal -->
+<div class="overlay" id="settingsOverlay">
+  <div class="modal">
+    <h2>Projecten beheren</h2>
+    <div class="settings-list" id="settingsProjList"></div>
+    <div style="border-top: 1px solid #f0f0ee; padding-top: 14px;">
+      <div style="font-size:10px;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px">Nieuw project</div>
+      <div class="new-proj-row">
+        <input type="text" id="newProjName" placeholder="Naam..." maxlength="40" />
+        <button class="btn-proj-add" id="btnAddProj">Toevoegen</button>
+      </div>
+    </div>
+    <div class="modal-btns" style="margin-top:16px">
+      <button class="btn-save" id="btnSettingsClose">Klaar</button>
     </div>
   </div>
 </div>
@@ -340,16 +342,7 @@ tr:last-child td { border-bottom: none; }
       <div style="font-size:12px;font-weight:600;color:#6b6b6b;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Voorstel</div>
       <div style="background:#f9fafb;border:1.5px solid #e5e7eb;border-radius:10px;padding:14px 14px 10px">
         <div class="fg" style="margin-bottom:8px"><label>Taak</label><input type="text" id="importTaak" /></div>
-        <div class="fg" style="margin-bottom:8px"><label>Project</label>
-          <select id="importProject">
-            <option value="">— Geen project —</option>
-            <option value="Weekmenuflyer">Weekmenuflyer</option>
-            <option value="Menuplanning">Menuplanning</option>
-            <option value="Koelkast">Koelkast</option>
-            <option value="Social posts">Social posts</option>
-            <option value="Overig">Overig</option>
-          </select>
-        </div>
+        <div class="fg" style="margin-bottom:8px"><label>Project</label><select id="importProject"><option value="">— Geen project —</option></select></div>
         <div style="display:flex;gap:10px;flex-wrap:wrap">
           <div class="fg" style="margin-bottom:0;flex:0 0 auto"><label>Doelweek</label>
             <input type="number" id="importWeek" min="1" max="52" style="width:90px" />
@@ -374,38 +367,6 @@ tr:last-child td { border-bottom: none; }
   </div>
 </div>
 
-<!-- Edit task modal -->
-<div class="overlay" id="editOverlay">
-  <div class="modal">
-    <h2>Taak bewerken</h2>
-    <div class="fg"><label>Taak</label><input type="text" id="eTaak" /></div>
-    <div class="fg"><label>Deadline</label><input type="date" id="eDeadline" /></div>
-    <div class="fg"><label>Project</label>
-      <select id="eProject">
-        <option value="">— Geen project —</option>
-        <option value="Weekmenuflyer">Weekmenuflyer</option>
-        <option value="Menuplanning">Menuplanning</option>
-        <option value="Koelkast">Koelkast</option>
-        <option value="Social posts">Social posts</option>
-        <option value="Overig">Overig</option>
-      </select>
-    </div>
-    <div class="fg"><label>Herhaling</label>
-      <select id="eHerhaling">
-        <option value="">— Eenmalig —</option>
-        <option value="Wekelijks">Elke week</option>
-        <option value="2 wekelijks">Elke 2 weken</option>
-        <option value="4 wekelijks">Elke 4 weken</option>
-      </select>
-    </div>
-    <div class="fg"><label>Opmerking / link</label><textarea id="eNote" placeholder="bijv. Canva link, extra info..."></textarea></div>
-    <div class="modal-btns">
-      <button class="btn-cancel" id="btnEditCancel">Annuleren</button>
-      <button class="btn-save" id="btnEditSave">Opslaan</button>
-    </div>
-  </div>
-</div>
-
 <div class="toast" id="toast"></div>
 
 <script>
@@ -414,6 +375,7 @@ let tasks = [];
 let doneTasks = [];
 let doneVisible = false;
 let projects = {};
+let projectsList = []; // dynamic project list from Notion schema
 let projFilter = 'alles';
 let currentView = 'taken';
 let statusMenuTarget = null;
@@ -426,11 +388,30 @@ const MS = ['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','d
 const now = new Date();
 document.getElementById('datum').textContent = `${D[now.getDay()]} ${now.getDate()} ${M[now.getMonth()]}`;
 
-// ── Project status options ──
+// Notion color → CSS style
+const NOTION_COLORS = {
+  default: { bg: '#f3f4f6', text: '#6b7280' },
+  gray:    { bg: '#f3f4f6', text: '#6b7280' },
+  brown:   { bg: '#fef3c7', text: '#92400e' },
+  orange:  { bg: '#ffedd5', text: '#c2410c' },
+  yellow:  { bg: '#fefce8', text: '#854d0e' },
+  green:   { bg: '#dcfce7', text: '#15803d' },
+  blue:    { bg: '#dbeafe', text: '#1d4ed8' },
+  purple:  { bg: '#ede9fe', text: '#6d28d9' },
+  pink:    { bg: '#fce7f3', text: '#be185d' },
+  red:     { bg: '#fee2e2', text: '#b91c1c' },
+};
+
+function badgeStyle(colorName) {
+  const c = NOTION_COLORS[colorName] || NOTION_COLORS.default;
+  return `background:${c.bg};color:${c.text}`;
+}
+
+// ── Project status options (for overzicht dropdowns) ──
 const STATUS_OPTIONS = {
   weekmenuflyer: ['Nog niet begonnen','Wachtend op GO Pieter','Bezig','Klaar voor proofread','Besteld','Geleverd'],
-  koelkast: ['Nog niet begonnen','Wachtend op GO Pieter','Bezig','Product informatie verwerkt','Bestelling geplaatst','Klaar'],
-  menuplanning: ['Menu gemaakt','Pieter GO','Menu klaargezet in Shop','Live gegaan'],
+  koelkast:      ['Nog niet begonnen','Wachtend op GO Pieter','Bezig','Product informatie verwerkt','Bestelling geplaatst','Klaar'],
+  menuplanning:  ['Menu gemaakt','Pieter GO','Menu klaargezet in Shopify','Import gedraaid','Collectie gecheckt','Live gegaan'],
 };
 
 function statusClass(s) {
@@ -440,7 +421,7 @@ function statusClass(s) {
   const purple = ['Klaar voor proofread'];
   const orange = ['Bezig','Product informatie verwerkt'];
   const yellow = ['Wachtend op GO Pieter','Pieter GO'];
-  const sky    = ['Menu gemaakt','Menu klaargezet in Shop'];
+  const sky    = ['Menu gemaakt','Menu klaargezet in Shopify','Import gedraaid','Collectie gecheckt'];
   if (green.includes(s))  return 's-green';
   if (blue.includes(s))   return 's-blue';
   if (purple.includes(s)) return 's-purple';
@@ -458,12 +439,11 @@ function weekNum(wStr) {
 function weekDates(wStr) {
   const n = weekNum(wStr);
   if (n === 999) return '';
-  // ISO week N Monday for 2026
-  const jan4 = new Date(2026, 0, 4);
+  const yr = new Date().getFullYear();
+  const jan4 = new Date(yr, 0, 4);
   const jan4Day = jan4.getDay() || 7;
   const monday = new Date(jan4);
   monday.setDate(jan4.getDate() - (jan4Day - 1) + (n - 1) * 7);
-  // Menu week starts Friday = Monday - 3 days
   const fri = new Date(monday); fri.setDate(monday.getDate() - 3);
   const thu = new Date(fri);    thu.setDate(fri.getDate() + 6);
   const fmt = d => `${d.getDate()} ${MS[d.getMonth()]}`;
@@ -480,12 +460,29 @@ function fmtDate(d) {
   return `${parseInt(day)} ${MS[parseInt(m)-1]}`;
 }
 
-function badgeClass(p) {
-  return { 'Weekmenuflyer':'b-weekmenuflyer','Menuplanning':'b-menuplanning','Koelkast':'b-koelkast','Social posts':'b-social','Overig':'b-overig' }[p] || 'b-overig';
-}
-
 function esc(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Dynamic project selects ──
+async function loadProjectsList() {
+  try {
+    const r = await fetch(`${API}/tasks/projects`);
+    projectsList = await r.json();
+    populateProjectSelects();
+    if (tasks.length) renderProjFilters();
+  } catch { /* keep empty, selects stay with static fallback */ }
+}
+
+function populateProjectSelects() {
+  ['fProject','eProject','importProject'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const cur = el.value;
+    el.innerHTML = '<option value="">— Geen project —</option>' +
+      projectsList.map(p => `<option value="${esc(p.name)}">${esc(p.name)}</option>`).join('');
+    if (cur) el.value = cur;
+  });
 }
 
 // ── Navigation ──
@@ -494,12 +491,12 @@ document.querySelectorAll('.nav-tab').forEach(btn => {
     document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     currentView = btn.dataset.view;
-    document.getElementById('viewTaken').style.display      = currentView === 'taken' ? '' : 'none';
-    document.getElementById('viewOverzicht').style.display  = currentView === 'overzicht' ? '' : 'none';
-    document.getElementById('viewGeschiedenis').style.display = currentView === 'geschiedenis' ? '' : 'none';
-    document.getElementById('projFilters').style.display    = currentView === 'taken' ? 'flex' : 'none';
-    document.getElementById('btnAdd').style.display         = currentView === 'taken' ? '' : 'none';
-    document.getElementById('btnMailImport').style.display  = currentView === 'taken' ? '' : 'none';
+    document.getElementById('viewTaken').style.display       = currentView === 'taken'      ? '' : 'none';
+    document.getElementById('viewOverzicht').style.display   = currentView === 'overzicht'  ? '' : 'none';
+    document.getElementById('viewGeschiedenis').style.display= currentView === 'geschiedenis'? '' : 'none';
+    document.getElementById('projFilters').style.display     = currentView === 'taken'      ? 'flex' : 'none';
+    document.getElementById('btnAdd').style.display          = currentView === 'taken'      ? '' : 'none';
+    document.getElementById('btnMailImport').style.display   = currentView === 'taken'      ? '' : 'none';
     if (currentView === 'overzicht' && !Object.keys(projects).length) loadProjects();
     if (currentView === 'geschiedenis') loadRecent();
   });
@@ -560,7 +557,7 @@ function renderTaken() {
               <div class="task-body">
                 <div class="done-name">${esc(t.taak)}</div>
                 <div class="done-meta">
-                  ${t.project ? `<span class="badge ${badgeClass(t.project)}" style="opacity:0.6">${esc(t.project)}</span>` : ''}
+                  ${t.project ? `<span class="badge" style="${badgeStyle(t.projectColor)};opacity:.6">${esc(t.project)}</span>` : ''}
                   ${t.doelweek ? `<span class="doelw">${esc(t.doelweek)}</span>` : ''}
                 </div>
               </div>
@@ -602,7 +599,7 @@ function taskCard(t) {
     <div class="task-body">
       <div class="task-name">${esc(t.taak)}</div>
       <div class="task-meta">
-        ${t.project ? `<span class="badge ${badgeClass(t.project)}">${esc(t.project)}</span>` : ''}
+        ${t.project ? `<span class="badge" style="${badgeStyle(t.projectColor)}">${esc(t.project)}</span>` : ''}
         ${t.doelweek ? `<span class="doelw">${esc(t.doelweek)}</span>` : ''}
         ${t.deadline ? `<span class="dl${ov?' laat':tod?' today':''}">${fmtDate(t.deadline)}</span>` : ''}
         ${t.herhaling ? `<span class="recur-badge">↻ ${esc(t.herhaling)}</span>` : ''}
@@ -624,73 +621,71 @@ function taskCard(t) {
 
 // ── Overzicht view ──
 function currentISOWeek() {
-  const now = new Date();
-  const jan4 = new Date(now.getFullYear(), 0, 4);
+  const n = new Date();
+  const jan4 = new Date(n.getFullYear(), 0, 4);
   const jan4Day = jan4.getDay() || 7;
   const monday = new Date(jan4);
   monday.setDate(jan4.getDate() - (jan4Day - 1));
-  return Math.floor((now - monday) / (7 * 864e5)) + 1;
+  return Math.floor((n - monday) / (7 * 864e5)) + 1;
 }
 
 function renderOverzicht() {
   if (!Object.keys(projects).length) return;
 
-  // Build lookup maps keyed by week number (normalise capitalisation/format)
   const map = {};
-  ['weekmenuflyer','koelkast','menuplanning'].forEach(k => {
+  ['weekmenuflyer','menuplanning','koelkast'].forEach(k => {
     map[k] = {};
     (projects[k] || []).forEach(e => {
       const n = weekNum(e.week);
-      if (n !== 999 && !map[k][n]) map[k][n] = e; // first entry wins for duplicates
+      if (n !== 999 && !map[k][n]) map[k][n] = e;
     });
   });
 
   const curWeek = currentISOWeek();
-  const maxWeek = Math.max(36, curWeek + 10);
-  const pastCutoff = curWeek - 4; // rows before this are collapsed by default
-  const futureCutoff = curWeek + 4; // rows beyond this are collapsed by default
+  const maxWeek = Math.max(52, curWeek + 10);
+  const pastCutoff   = curWeek - 4;
+  const futureCutoff = curWeek + 4;
 
   const rows = [];
   let pastToggleInserted = false;
-  for (let wn = 15; wn <= maxWeek; wn++) {
-    const isCurrent = wn === curWeek;
-    const isPast = wn < curWeek;
-    const isFarPast = wn < pastCutoff;
+
+  for (let wn = 1; wn <= maxWeek; wn++) {
+    const isCurrent   = wn === curWeek;
+    const isPast      = wn < curWeek;
+    const isFarPast   = wn < pastCutoff;
     const isFarFuture = wn > futureCutoff;
     let rowClass = isCurrent ? 'current-week-row' : '';
     if (isFarPast)   rowClass += (rowClass ? ' ' : '') + 'far-past-row';
     if (isFarFuture) rowClass += (rowClass ? ' ' : '') + 'far-future-row';
-    const rowAttr = rowClass ? ` class="${rowClass}"` : '';
-    const cellClass = isCurrent ? ' current' : '';
-    const cells = ['weekmenuflyer','koelkast','menuplanning'].map(k => {
+
+    const cells = ['weekmenuflyer','menuplanning','koelkast'].map(k => {
       const entry = map[k][wn];
       const s = entry?.status || null;
-      if (s) return `<td><span class="status-badge ${statusClass(s)}">${esc(s)}</span></td>`;
+      if (s) {
+        return `<td><span class="status-badge ${statusClass(s)}" data-proj="${k}" data-id="${entry.id}" onclick="openStatusMenu(event,this)">${esc(s)}</span></td>`;
+      }
       if (isPast || isCurrent) return `<td><span class="status-badge s-green">Klaar</span></td>`;
-      return `<td></td>`;
+      return `<td><span class="status-badge empty" data-proj="${k}" data-id="" onclick="openStatusMenu(event,this)">—</span></td>`;
     }).join('');
 
-    // Insert "show past" toggle just before the visible window starts
     if (!pastToggleInserted && wn === pastCutoff) {
       pastToggleInserted = true;
-      rows.push(`<tr class="overzicht-toggle-row" id="overzichtTogglePast">
+      rows.push(`<tr class="overzicht-toggle-row">
         <td colspan="4" style="text-align:center;padding:8px 0;cursor:pointer;color:#9ca3af;font-size:12px;user-select:none" onclick="toggleFarPast(this)">
           ▲ Toon weken eerder dan -4
         </td>
       </tr>`);
     }
-
-    // Insert "show future" toggle at the future cutoff boundary
     if (wn === futureCutoff + 1) {
-      rows.push(`<tr class="overzicht-toggle-row" id="overzichtToggle">
+      rows.push(`<tr class="overzicht-toggle-row">
         <td colspan="4" style="text-align:center;padding:8px 0;cursor:pointer;color:#9ca3af;font-size:12px;user-select:none" onclick="toggleFarFuture(this)">
           ▼ Toon weken verder dan +4
         </td>
       </tr>`);
     }
 
-    rows.push(`<tr${rowAttr} style="${isFarPast || isFarFuture ? 'display:none' : ''}">
-      <td class="week-cell${cellClass}">
+    rows.push(`<tr${rowClass ? ` class="${rowClass}"` : ''} style="${isFarPast || isFarFuture ? 'display:none' : ''}">
+      <td class="week-cell${isCurrent ? ' current' : ''}">
         <div>Week ${wn}</div>
         <div style="font-size:10px;color:#bbb;font-weight:400;margin-top:1px">${weekDates(`Week ${wn}`)}</div>
       </td>
@@ -753,10 +748,10 @@ async function setStatus(newStatus) {
   if (!id) return;
 
   const prev = el.textContent;
+  const prevClass = el.className;
   el.textContent = newStatus;
   el.className = `status-badge ${statusClass(newStatus)}`;
 
-  // Update local data
   const arr = projects[proj];
   const entry = arr.find(e => e.id === id);
   if (entry) entry.status = newStatus;
@@ -767,10 +762,10 @@ async function setStatus(newStatus) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: newStatus }),
     });
-    toast('Status bijgewerkt in Notion');
+    toast('Status bijgewerkt');
   } catch {
     el.textContent = prev;
-    el.className = `status-badge ${statusClass(prev)}`;
+    el.className = prevClass;
     toast('Opslaan mislukt');
   }
 }
@@ -824,7 +819,7 @@ async function markDone(id, el) {
   }
 }
 
-// ── Modal ──
+// ── Add modal ──
 document.getElementById('btnAdd').onclick = () => {
   document.getElementById('overlay').classList.add('open');
   setTimeout(() => document.getElementById('fTaak').focus(), 50);
@@ -836,9 +831,10 @@ document.getElementById('overlay').addEventListener('click', e => {
 document.getElementById('fTaak').addEventListener('keydown', e => { if (e.key === 'Enter') saveTask(); });
 document.getElementById('btnSave').onclick = saveTask;
 
-// ── Doelweek → deadline helper ──
+// Doelweek → deadline
 function thursdayOfMenuWeek(n) {
-  const jan4 = new Date(2026, 0, 4);
+  const yr = new Date().getFullYear();
+  const jan4 = new Date(yr, 0, 4);
   const jan4Day = jan4.getDay() || 7;
   const monday = new Date(jan4);
   monday.setDate(jan4.getDate() - (jan4Day - 1) + (n - 1) * 7);
@@ -850,8 +846,7 @@ function thursdayOfMenuWeek(n) {
 document.getElementById('fWeek').addEventListener('input', function() {
   const n = parseInt(this.value);
   if (n >= 1 && n <= 52) {
-    const d = thursdayOfMenuWeek(n);
-    document.getElementById('fDeadline').value = d;
+    document.getElementById('fDeadline').value = thursdayOfMenuWeek(n);
     document.getElementById('fWeekHint').textContent = weekDates(`Week ${n}`);
   } else {
     document.getElementById('fWeekHint').textContent = '';
@@ -893,8 +888,7 @@ async function saveTask() {
     toast('Taak toegevoegd');
     await loadTasks();
   } catch {
-    btn.textContent = 'Mislukt — probeer opnieuw';
-    setTimeout(() => { btn.textContent = 'Opslaan in Notion'; btn.disabled = false; }, 2000);
+    toast('Opslaan mislukt');
   } finally {
     btn.textContent = 'Opslaan in Notion'; btn.disabled = false;
   }
@@ -905,11 +899,11 @@ let editTaskId = null;
 
 function openEditModal(t) {
   editTaskId = t.id;
-  document.getElementById('eTaak').value = t.taak || '';
+  document.getElementById('eTaak').value     = t.taak || '';
   document.getElementById('eDeadline').value = t.deadline || '';
-  document.getElementById('eProject').value = t.project || '';
-  document.getElementById('eHerhaling').value = t.herhaling || '';
-  document.getElementById('eNote').value = t.opmerking || '';
+  document.getElementById('eProject').value  = t.project || '';
+  document.getElementById('eHerhaling').value= t.herhaling || '';
+  document.getElementById('eNote').value     = t.opmerking || '';
   document.getElementById('editOverlay').classList.add('open');
   setTimeout(() => document.getElementById('eNote').focus(), 50);
 }
@@ -936,7 +930,7 @@ document.getElementById('btnEditSave').onclick = async () => {
       body: JSON.stringify(body),
     });
     document.getElementById('editOverlay').classList.remove('open');
-    toast('Bijgewerkt in Notion');
+    toast('Bijgewerkt');
     await loadTasks();
   } catch {
     toast('Opslaan mislukt');
@@ -945,41 +939,130 @@ document.getElementById('btnEditSave').onclick = async () => {
   }
 };
 
+document.getElementById('btnEditDelete').onclick = async () => {
+  if (!confirm('Taak verwijderen? Dit kan niet ongedaan worden gemaakt.')) return;
+  const btn = document.getElementById('btnEditDelete');
+  btn.textContent = 'Verwijderen...'; btn.disabled = true;
+  try {
+    await fetch(`${API}/tasks/${editTaskId}`, { method: 'DELETE' });
+    document.getElementById('editOverlay').classList.remove('open');
+    tasks = tasks.filter(t => t.id !== editTaskId);
+    renderTaken();
+    toast('Taak verwijderd');
+  } catch {
+    toast('Verwijderen mislukt');
+    btn.textContent = 'Taak verwijderen'; btn.disabled = false;
+  }
+};
+
+// ── Settings modal ──
+document.getElementById('btnSettings').onclick = openSettings;
+document.getElementById('btnSettingsClose').onclick = () => document.getElementById('settingsOverlay').classList.remove('open');
+document.getElementById('settingsOverlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('settingsOverlay')) document.getElementById('settingsOverlay').classList.remove('open');
+});
+
+function openSettings() {
+  renderProjectSettings();
+  document.getElementById('newProjName').value = '';
+  document.getElementById('settingsOverlay').classList.add('open');
+  setTimeout(() => document.getElementById('newProjName').focus(), 50);
+}
+
+function renderProjectSettings() {
+  const SYSTEM = ['Weekmenuflyer', 'Menuplanning', 'Koelkast'];
+  const list = document.getElementById('settingsProjList');
+  if (!projectsList.length) {
+    list.innerHTML = '<div style="color:#c4c4c4;font-size:13px;padding:10px 0">Projecten laden...</div>';
+    return;
+  }
+  list.innerHTML = projectsList.map(p => `
+    <div class="settings-proj-row">
+      <span class="badge" style="${badgeStyle(p.color)}">${esc(p.name)}</span>
+      <span class="settings-proj-name">${esc(p.name)}</span>
+      ${SYSTEM.includes(p.name)
+        ? '<span class="settings-proj-system">Systeem</span>'
+        : `<button class="btn-proj-del" data-name="${esc(p.name)}">Verwijderen</button>`
+      }
+    </div>
+  `).join('');
+
+  list.querySelectorAll('.btn-proj-del').forEach(btn => {
+    btn.addEventListener('click', () => deleteProject(btn.dataset.name));
+  });
+}
+
+document.getElementById('btnAddProj').onclick = addProject;
+document.getElementById('newProjName').addEventListener('keydown', e => { if (e.key === 'Enter') addProject(); });
+
+async function addProject() {
+  const name = document.getElementById('newProjName').value.trim();
+  if (!name) { document.getElementById('newProjName').focus(); return; }
+  const btn = document.getElementById('btnAddProj');
+  btn.textContent = 'Toevoegen...'; btn.disabled = true;
+  try {
+    const r = await fetch(`${API}/tasks/projects`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    });
+    const data = await r.json();
+    if (!r.ok) { toast(data.error || 'Mislukt'); return; }
+    document.getElementById('newProjName').value = '';
+    await loadProjectsList();
+    renderProjectSettings();
+    toast(`Project "${name}" toegevoegd`);
+  } catch {
+    toast('Toevoegen mislukt');
+  } finally {
+    btn.textContent = 'Toevoegen'; btn.disabled = false;
+  }
+}
+
+async function deleteProject(name) {
+  if (!confirm(`Project "${name}" verwijderen?`)) return;
+  try {
+    const r = await fetch(`${API}/tasks/projects/${encodeURIComponent(name)}`, { method: 'DELETE' });
+    const data = await r.json();
+    if (!r.ok) { toast(data.error || 'Mislukt'); return; }
+    await loadProjectsList();
+    renderProjectSettings();
+    toast(`Project "${name}" verwijderd`);
+  } catch {
+    toast('Verwijderen mislukt');
+  }
+}
+
 // ── Mail import modal ──
 const NL_MONTHS = {jan:1,feb:2,mrt:3,apr:4,mei:5,jun:6,jul:7,aug:8,sep:9,okt:10,nov:11,dec:12,
   januari:1,februari:2,maart:3,april:4,mei:5,juni:6,juli:7,augustus:8,september:9,oktober:10,november:11,december:12};
 
 function parseEmail(text) {
   const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
-
-  // Task name: subject line preferred, else first real sentence
   let taskName = '';
   const subjectLine = lines.find(l => /^(onderwerp|subject)\s*:/i.test(l));
   taskName = subjectLine ? subjectLine.replace(/^(onderwerp|subject)\s*:\s*/i,'').trim() : (lines[0] || '');
 
-  // Week number
   let week = null;
   const wm = text.match(/week\s+(\d+)/i);
   if (wm) week = parseInt(wm[1]);
 
-  // Deadline: look for "dd maand" or "dd/mm" or "dd-mm"
   let deadline = '';
   const dmMatch = text.match(/(\d{1,2})\s+(januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december|jan|feb|mrt|apr|jun|jul|aug|sep|okt|nov|dec)/i);
   if (dmMatch) {
     const day = parseInt(dmMatch[1]);
     const mon = NL_MONTHS[dmMatch[2].toLowerCase()];
-    if (mon) deadline = `2026-${String(mon).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+    if (mon) deadline = `${new Date().getFullYear()}-${String(mon).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
   } else {
     const numMatch = text.match(/(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?/);
     if (numMatch) {
       const day = parseInt(numMatch[1]), mon = parseInt(numMatch[2]);
-      const yr  = numMatch[3] ? (parseInt(numMatch[3]) < 100 ? 2000+parseInt(numMatch[3]) : parseInt(numMatch[3])) : 2026;
+      const yr  = numMatch[3] ? (parseInt(numMatch[3]) < 100 ? 2000+parseInt(numMatch[3]) : parseInt(numMatch[3])) : new Date().getFullYear();
       deadline = `${yr}-${String(mon).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
     }
   }
   if (!deadline && week) deadline = thursdayOfMenuWeek(week);
 
-  // Project from keywords
   let project = '';
   const lower = text.toLowerCase();
   if (lower.includes('flyer')) project = 'Weekmenuflyer';
@@ -998,23 +1081,19 @@ document.getElementById('btnMailImport').onclick = () => {
   document.getElementById('mailImportOverlay').classList.add('open');
   setTimeout(() => document.getElementById('mailImportText').focus(), 50);
 };
-
-document.getElementById('btnImportCancel').onclick = () => {
-  document.getElementById('mailImportOverlay').classList.remove('open');
-};
+document.getElementById('btnImportCancel').onclick = () => document.getElementById('mailImportOverlay').classList.remove('open');
 document.getElementById('mailImportOverlay').addEventListener('click', e => {
-  if (e.target === document.getElementById('mailImportOverlay'))
-    document.getElementById('mailImportOverlay').classList.remove('open');
+  if (e.target === document.getElementById('mailImportOverlay')) document.getElementById('mailImportOverlay').classList.remove('open');
 });
 
 document.getElementById('btnImportAnalyse').onclick = () => {
   const text = document.getElementById('mailImportText').value.trim();
   if (!text) { document.getElementById('mailImportText').focus(); return; }
   const p = parseEmail(text);
-  document.getElementById('importTaak').value = p.taskName;
+  document.getElementById('importTaak').value    = p.taskName;
   document.getElementById('importProject').value = p.project;
-  document.getElementById('importWeek').value = p.week || '';
-  document.getElementById('importDeadline').value = p.deadline;
+  document.getElementById('importWeek').value    = p.week || '';
+  document.getElementById('importDeadline').value= p.deadline;
   document.getElementById('mailImportSuggestions').style.display = '';
   document.getElementById('btnImportAdd').style.display = '';
   document.getElementById('btnImportAnalyse').textContent = 'Opnieuw analyseren';
@@ -1049,9 +1128,9 @@ document.getElementById('btnImportAdd').onclick = async () => {
 
 // ── Mail modal ──
 const CONTACTS = [
-  { name: 'Aaron',   email: 'aron@thuysvers.nl' },
-  { name: 'Marcus',  email: 'Marcus.leloux@thuysvers.nl' },
-  { name: 'Pieter',  email: 'Pieter@thuysvers.nl' },
+  { name: 'Aaron',  email: 'aron@thuysvers.nl' },
+  { name: 'Marcus', email: 'Marcus.leloux@thuysvers.nl' },
+  { name: 'Pieter', email: 'Pieter@thuysvers.nl' },
 ];
 
 let mailWeek = '';
@@ -1104,7 +1183,7 @@ function generateSubject() {
 
 function updateMailCompose() {
   if (selectedContacts.size > 0) {
-    document.getElementById('mailBody').value = generateTemplate();
+    document.getElementById('mailBody').value    = generateTemplate();
     document.getElementById('mailSubject').value = generateSubject();
   }
 }
@@ -1113,10 +1192,10 @@ function openMailModal(week, taskTitle) {
   mailWeek = week || '';
   mailTask = taskTitle || '';
   selectedContacts = new Set();
-  document.getElementById('mailTitle').textContent = taskTitle || (week ? `Mail over ${week}` : 'Mail versturen');
+  document.getElementById('mailTitle').textContent    = taskTitle || (week ? `Mail over ${week}` : 'Mail versturen');
   document.getElementById('mailSubtitle').textContent = week ? weekDates(week) : '';
-  document.getElementById('mailLink').value = '';
-  document.getElementById('mailBody').value = '';
+  document.getElementById('mailLink').value    = '';
+  document.getElementById('mailBody').value    = '';
   document.getElementById('mailSubject').value = '';
 
   document.getElementById('contactList').innerHTML = CONTACTS.map((c,i) => `
@@ -1152,20 +1231,17 @@ function openMailModal(week, taskTitle) {
   document.getElementById('mailOverlay').classList.add('open');
 }
 
-document.getElementById('btnMailCancel').onclick = () => {
-  document.getElementById('mailOverlay').classList.remove('open');
-};
+document.getElementById('btnMailCancel').onclick = () => document.getElementById('mailOverlay').classList.remove('open');
 document.getElementById('mailOverlay').addEventListener('click', e => {
-  if (e.target === document.getElementById('mailOverlay'))
-    document.getElementById('mailOverlay').classList.remove('open');
+  if (e.target === document.getElementById('mailOverlay')) document.getElementById('mailOverlay').classList.remove('open');
 });
 
 document.getElementById('btnMailSend').onclick = async () => {
   const btn = document.getElementById('btnMailSend');
   btn.textContent = 'Versturen...'; btn.disabled = true;
-  const to = [...selectedContacts].map(i => CONTACTS[i].email);
+  const to      = [...selectedContacts].map(i => CONTACTS[i].email);
   const subject = document.getElementById('mailSubject').value.trim();
-  const text = document.getElementById('mailBody').value.trim();
+  const text    = document.getElementById('mailBody').value.trim();
   try {
     const res = await fetch(`${API}/email`, {
       method: 'POST',
@@ -1268,7 +1344,6 @@ async function loadRecent() {
     const recent = await r.json();
     if (!recent.length) { el.innerHTML = '<div class="empty">Geen afgevinkte taken</div>'; return; }
 
-    // Groepeer per dag
     const groups = [];
     let curLabel = null;
     for (const t of recent) {
@@ -1291,7 +1366,7 @@ async function loadRecent() {
             <div class="gesch-body">
               <div class="gesch-name">${esc(t.taak)}</div>
               <div class="gesch-meta">
-                ${t.project ? `<span class="badge ${badgeClass(t.project)}">${esc(t.project)}</span>` : ''}
+                ${t.project ? `<span class="badge" style="${badgeStyle(t.projectColor)}">${esc(t.project)}</span>` : ''}
                 ${t.doelweek ? `<span class="doelw">${esc(t.doelweek)}</span>` : ''}
               </div>
             </div>
@@ -1321,6 +1396,7 @@ async function loadDoneTasks() {
 loadTasks();
 loadDoneTasks();
 loadProposals();
+loadProjectsList();
 setInterval(loadTasks, 5 * 60 * 1000);
 setInterval(loadProposals, 10 * 60 * 1000);
 </script>

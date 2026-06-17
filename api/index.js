@@ -1,7 +1,9 @@
-const TASKS_DB   = '47ae20e8-094b-475b-81fc-7efdf7f5d069';
-const WMF_DB     = '33d17522-60d6-8044-b429-debae08d8cab';
-const KOELKAST_DB= '87de96d6-051b-4035-959b-63fe753b1319';
-const MENU_DB    = '8808d20d-d534-4413-9f46-1904a430bc1c';
+const TASKS_DB    = '47ae20e8-094b-475b-81fc-7efdf7f5d069';
+const WMF_DB      = '33d17522-60d6-8044-b429-debae08d8cab';
+const KOELKAST_DB = '87de96d6-051b-4035-959b-63fe753b1319';
+const MENU_DB     = '8808d20d-d534-4413-9f46-1904a430bc1c';
+
+const SYSTEM_PROJECTS = ['Weekmenuflyer', 'Menuplanning', 'Koelkast'];
 
 const STATUS_RULES = [
   { match: 'nieuw menu maken', updates: [
@@ -14,15 +16,14 @@ const STATUS_RULES = [
     { db: KOELKAST_DB,  status: 'Bezig' },
     { db: WMF_DB,       status: 'Bezig' },
   ]},
-  { match: 'menu klaarzetten',             updates: [{ db: MENU_DB,      status: 'Menu klaargezet in Shopify' }] },
-  { match: 'import draaien',               updates: [{ db: MENU_DB,      status: 'Import gedraaid' }] },
-  { match: 'menucheck in verborgen',       updates: [{ db: MENU_DB,      status: 'Collectie gecheckt' }] },
-  { match: 'live menucheck',               updates: [{ db: MENU_DB,      status: 'Live gegaan' }] },
-  { match: 'weekmenuflyer maken',          updates: [{ db: WMF_DB,       status: 'Klaar voor proofread' }] },
-  { match: 'weekmenuflyer bestellen',      updates: [{ db: WMF_DB,       status: 'Besteld' }] },
-  { match: 'flyers geleverd',              updates: [{ db: WMF_DB,       status: 'Geleverd' }] },
-  { match: 'koelkast productinformatie',   updates: [{ db: KOELKAST_DB,  status: 'Product informatie verwerkt' }] },
-  { match: 'koelkast bestelling plaatsen', updates: [{ db: KOELKAST_DB,  status: 'Bestelling geplaatst' }] },
+  { match: 'menu klaarzetten',           updates: [{ db: MENU_DB,      status: 'Menu klaargezet in Shopify' }] },
+  { match: 'import draaien',             updates: [{ db: MENU_DB,      status: 'Import gedraaid' }] },
+  { match: 'menucheck in verborgen',     updates: [{ db: MENU_DB,      status: 'Collectie gecheckt' }] },
+  { match: 'live menucheck',             updates: [{ db: MENU_DB,      status: 'Live gegaan' }] },
+  { match: 'weekmenuflyer maken',        updates: [{ db: WMF_DB,       status: 'Klaar voor proofread' }] },
+  { match: 'weekmenuflyer bestellen',    updates: [{ db: WMF_DB,       status: 'Besteld' }] },
+  { match: 'koelkast productinformatie', updates: [{ db: KOELKAST_DB,  status: 'Product informatie verwerkt' }] },
+  { match: 'koelkast bestelling',        updates: [{ db: KOELKAST_DB,  status: 'Bestelling geplaatst' }] },
 ];
 
 const HERHALING_DAYS = { 'Wekelijks': 7, '2 wekelijks': 14, '4 wekelijks': 28 };
@@ -55,7 +56,7 @@ async function maybeUpdateProjectStatus(env, taskName, doelweek) {
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, PATCH, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type',
 };
 
@@ -107,7 +108,7 @@ function formatProjectEntry(page) {
   };
 }
 
-// ── Gmail OAuth helpers ──
+// ── Gmail helpers ──
 async function getGmailToken(env) {
   if (!env.GMAIL_REFRESH_TOKEN) return null;
   const res = await fetch('https://oauth2.googleapis.com/token', {
@@ -124,8 +125,8 @@ async function getGmailToken(env) {
   return data.access_token || null;
 }
 
-// Hard skip: truly automated senders (never personal)
-const SKIP_FROM_RE = /noreply|no-reply|donotreply|mailer-daemon|notification@|updates@/i;
+const SKIP_FROM_RE    = /noreply|no-reply|donotreply|mailer-daemon|notification@|updates@|newsletter|info@thuys/i;
+const SKIP_SUBJECT_RE = /\b(order|bestell|bevestig|tracking|betaling|factuur|invoice|nieuwsbrief|receipt|confirm|verzend)\b/i;
 
 function extractBodyText(payload) {
   if (!payload) return '';
@@ -142,7 +143,6 @@ function extractBodyText(payload) {
   return '';
 }
 
-// Calls Claude Haiku to understand the email and suggest a task if relevant
 async function analyzeEmail(env, subject, from, bodyText) {
   if (!env.ANTHROPIC_API_KEY) return null;
 
@@ -154,19 +154,33 @@ async function analyzeEmail(env, subject, from, bodyText) {
       'content-type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'claude-haiku-4-5',
-      max_tokens: 250,
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 200,
       messages: [{
         role: 'user',
-        content: `Je analyseert e-mails voor Ilse, eigenaar van ThuysVers (maaltijdleveringsbedrijf).
+        content: `Je bent assistent voor Ilse Grootjes, eigenaar van ThuysVers (wekelijkse maaltijdbox bezorging, Utrecht).
 
 Van: ${from}
 Onderwerp: ${subject}
-Bericht (eerste deel):
-${bodyText.slice(0, 2000)}
+Bericht:
+${bodyText.slice(0, 1500)}
 
-Bepaal of er een concrete actie voor Ilse in zit. Antwoord ALLEEN met dit JSON-object, niets anders:
-{"isActionable":true/false,"taskTitle":"korte taak max 80 tekens of null","summary":"1-2 zinnen wat er in de mail staat en wat Ilse moet doen"}`,
+Bepaal of er een CONCRETE ACTIE VOOR ILSE PERSOONLIJK in zit.
+
+isActionable=true ALLEEN als:
+- Iemand vraagt Ilse specifiek om iets te doen, beslissen of reageren
+- Relevant voor: inkoop, leveranciers, klanten, menu-planning, team
+
+isActionable=false voor:
+- Orderbevestigingen, facturen, automatische meldingen, tracking
+- Nieuwsbrieven, promoties, reclame
+- Alleen ter informatie, geen actie nodig
+- Systeemmeldingen (betalingen, verzendingen, etc.)
+
+Taaktitel: begin met werkwoord, max 60 tekens (bijv. "Reageren op X over Y")
+
+Antwoord ALLEEN met JSON:
+{"isActionable":true/false,"taskTitle":"...of null","summary":"max 1 zin wat Ilse moet doen of null"}`,
       }],
     }),
   });
@@ -179,9 +193,7 @@ Bepaal of er een concrete actie voor Ilse in zit. Antwoord ALLEEN met dit JSON-o
   try {
     const m = text.match(/\{[\s\S]*\}/);
     return m ? JSON.parse(m[0]) : null;
-  } catch {
-    return null;
-  }
+  } catch { return null; }
 }
 
 async function fetchGmailProposals(env) {
@@ -213,6 +225,7 @@ async function fetchGmailProposals(env) {
 
     if (unsub) continue;
     if (SKIP_FROM_RE.test(from)) continue;
+    if (SKIP_SUBJECT_RE.test(subject)) continue;
 
     const key = subject.toLowerCase().replace(/^(re:|fwd?:)\s*/i, '').replace(/\s+/g, '').slice(0, 40);
     if (seenSubjects.has(key)) continue;
@@ -226,19 +239,17 @@ async function fetchGmailProposals(env) {
       gmailId: msg.id,
       subject,
       from,
-      taskSuggestion: analysis.taskTitle || subject.slice(0, 80),
+      taskSuggestion: analysis.taskTitle || subject.slice(0, 60),
       summary: analysis.summary || '',
     });
   }
   return proposals;
 }
 
-// Store new Gmail proposals as Notion tasks (project="Gmail") — cron uses this
 async function collectGmailProposals(env) {
   const proposals = await fetchGmailProposals(env);
   if (!proposals?.length) return;
 
-  // Get existing stored proposals to avoid duplicates
   const existing = await notion(env, `/databases/${TASKS_DB}/query`, 'POST', {
     filter: { and: [
       { property: 'Project', select: { equals: 'Gmail' } },
@@ -267,7 +278,6 @@ async function collectGmailProposals(env) {
 }
 
 export default {
-  // Runs every 30 minutes via Cloudflare Cron Trigger
   async scheduled(event, env, ctx) {
     ctx.waitUntil(collectGmailProposals(env));
   },
@@ -290,7 +300,7 @@ export default {
         return json(data.results.map(formatTask).filter(t => t.project !== 'Gmail'));
       }
 
-      // GET /tasks/recent — recently completed tasks
+      // GET /tasks/recent
       if (pathname === '/tasks/recent' && method === 'GET') {
         const data = await notion(env, `/databases/${TASKS_DB}/query`, 'POST', {
           filter: { property: 'Klaar', checkbox: { equals: true } },
@@ -298,6 +308,50 @@ export default {
           page_size: 50,
         });
         return json(data.results.map(formatTask).filter(t => t.project !== 'Gmail'));
+      }
+
+      // GET /tasks/projects — project list from Notion schema
+      if (pathname === '/tasks/projects' && method === 'GET') {
+        const db = await notion(env, `/databases/${TASKS_DB}`);
+        const options = db.properties?.Project?.select?.options || [];
+        return json(options
+          .filter(o => o.name !== 'Gmail')
+          .map(o => ({ name: o.name, color: o.color || 'default' }))
+        );
+      }
+
+      // POST /tasks/projects — add project
+      if (pathname === '/tasks/projects' && method === 'POST') {
+        const body = await request.json();
+        if (!body.name?.trim()) return json({ error: 'Naam vereist' }, 400);
+        const db = await notion(env, `/databases/${TASKS_DB}`);
+        const existing = db.properties?.Project?.select?.options || [];
+        if (existing.find(o => o.name.toLowerCase() === body.name.trim().toLowerCase())) {
+          return json({ error: 'Bestaat al' }, 400);
+        }
+        await notion(env, `/databases/${TASKS_DB}`, 'PATCH', {
+          properties: {
+            Project: { select: { options: [...existing, { name: body.name.trim(), color: body.color || 'default' }] } }
+          }
+        });
+        return json({ ok: true });
+      }
+
+      // DELETE /tasks/projects/:name
+      const projDeleteMatch = pathname.match(/^\/tasks\/projects\/(.+)$/);
+      if (projDeleteMatch && method === 'DELETE') {
+        const name = decodeURIComponent(projDeleteMatch[1]);
+        if (SYSTEM_PROJECTS.includes(name)) {
+          return json({ error: 'Systeemproject kan niet worden verwijderd' }, 400);
+        }
+        const db = await notion(env, `/databases/${TASKS_DB}`);
+        const existing = db.properties?.Project?.select?.options || [];
+        await notion(env, `/databases/${TASKS_DB}`, 'PATCH', {
+          properties: {
+            Project: { select: { options: existing.filter(o => o.name !== name) } }
+          }
+        });
+        return json({ ok: true });
       }
 
       // POST /tasks
@@ -323,17 +377,25 @@ export default {
         const id = editMatch[1];
         const body = await request.json();
         const properties = {};
-        if (body.taak)      properties.Taak      = { title: [{ text: { content: body.taak } }] };
-        if (body.deadline !== undefined) properties.Deadline = body.deadline ? { date: { start: body.deadline } } : { date: null };
-        if (body.project  !== undefined) properties.Project  = body.project  ? { select: { name: body.project } }  : { select: null };
+        if (body.taak)                   properties.Taak      = { title: [{ text: { content: body.taak } }] };
+        if (body.deadline !== undefined)  properties.Deadline  = body.deadline  ? { date: { start: body.deadline } } : { date: null };
+        if (body.project  !== undefined)  properties.Project   = body.project   ? { select: { name: body.project } }  : { select: null };
         if (body.opmerking !== undefined) properties.Opmerking = { rich_text: body.opmerking ? [{ text: { content: body.opmerking } }] : [] };
         if (body.herhaling !== undefined) properties.Herhaling = body.herhaling ? { select: { name: body.herhaling } } : { select: null };
         await notion(env, `/pages/${id}`, 'PATCH', { properties });
         return json({ ok: true });
       }
 
-      // PATCH /tasks/:id — mark done / status
       const taskMatch = pathname.match(/^\/tasks\/([a-f0-9-]+)$/);
+
+      // DELETE /tasks/:id — archive task
+      if (taskMatch && method === 'DELETE') {
+        const id = taskMatch[1];
+        await notion(env, `/pages/${id}`, 'PATCH', { archived: true });
+        return json({ ok: true });
+      }
+
+      // PATCH /tasks/:id — mark done / update status
       if (taskMatch && method === 'PATCH') {
         const id = taskMatch[1];
         const body = await request.json();
@@ -345,17 +407,37 @@ export default {
         if (body.klaar === true) {
           await maybeUpdateProjectStatus(env, body.taak, body.doelweek);
 
-          // Auto-create next recurring task
           if (body.herhaling && HERHALING_DAYS[body.herhaling] && body.deadline) {
             const nextDeadline = addDays(body.deadline, HERHALING_DAYS[body.herhaling]);
-            const nextProps = {
-              Taak:      { title: [{ text: { content: body.taak } }] },
-              Deadline:  { date: { start: nextDeadline } },
-              Herhaling: { select: { name: body.herhaling } },
-            };
-            if (body.project)   nextProps.Project   = { select: { name: body.project } };
-            if (body.opmerking) nextProps.Opmerking = { rich_text: [{ text: { content: body.opmerking } }] };
-            await notion(env, '/pages', 'POST', { parent: { database_id: TASKS_DB }, properties: nextProps });
+
+            // Don't create if more than 4 weeks out
+            const fourWeeksOut = new Date();
+            fourWeeksOut.setUTCDate(fourWeeksOut.getUTCDate() + 28);
+
+            if (new Date(nextDeadline + 'T12:00:00Z') <= fourWeeksOut) {
+              // Prevent duplicates: skip if unchecked task with same name + deadline exists
+              const dupCheck = await notion(env, `/databases/${TASKS_DB}/query`, 'POST', {
+                filter: {
+                  and: [
+                    { property: 'Taak',     title:    { equals: body.taak } },
+                    { property: 'Klaar',    checkbox: { equals: false } },
+                    { property: 'Deadline', date:     { equals: nextDeadline } },
+                  ]
+                },
+                page_size: 1,
+              });
+
+              if (!dupCheck.results.length) {
+                const nextProps = {
+                  Taak:      { title: [{ text: { content: body.taak } }] },
+                  Deadline:  { date: { start: nextDeadline } },
+                  Herhaling: { select: { name: body.herhaling } },
+                };
+                if (body.project)   nextProps.Project   = { select: { name: body.project } };
+                if (body.opmerking) nextProps.Opmerking = { rich_text: [{ text: { content: body.opmerking } }] };
+                await notion(env, '/pages', 'POST', { parent: { database_id: TASKS_DB }, properties: nextProps });
+              }
+            }
           }
         }
         return json({ ok: true });
@@ -379,13 +461,13 @@ export default {
         return json({ ok: true });
       }
 
-      // GET /gmail/proposals — return stored Notion proposals
+      // GET /gmail/proposals
       if (pathname === '/gmail/proposals' && method === 'GET') {
         if (!env.NOTION_TOKEN) return json({ error: 'not_connected' }, 401);
         const data = await notion(env, `/databases/${TASKS_DB}/query`, 'POST', {
           filter: { and: [
             { property: 'Project', select: { equals: 'Gmail' } },
-            { property: 'Klaar', checkbox: { equals: false } },
+            { property: 'Klaar',   checkbox: { equals: false } },
           ]},
           sorts: [{ timestamp: 'created_time', direction: 'descending' }],
           page_size: 20,
@@ -394,32 +476,29 @@ export default {
           const op = p.properties.Opmerking?.rich_text?.[0]?.plain_text || '';
           const parts = op.split('||');
           const [gmailId, from, subject, ...summaryParts] = parts;
-          const summary = summaryParts.join('||');
           return {
             notionId:       p.id,
             gmailId:        gmailId || '',
             from:           from || '',
             subject:        subject || '',
-            summary:        summary || '',
+            summary:        summaryParts.join('||') || '',
             taskSuggestion: p.properties.Taak?.title?.[0]?.plain_text || '',
           };
         });
         return json(proposals);
       }
 
-      // POST /gmail/scan — manual trigger for the cron (useful for first run)
+      // POST /gmail/scan — manual trigger
       if (pathname === '/gmail/scan' && method === 'POST') {
         await collectGmailProposals(env);
         return json({ ok: true });
       }
 
-      // POST /gmail/dismiss/:notionId — archive the Notion proposal page
+      // POST /gmail/dismiss/:notionId
       const dismissMatch = pathname.match(/^\/gmail\/dismiss\/([a-f0-9-]+)$/);
       if (dismissMatch && method === 'POST') {
         const notionId = dismissMatch[1];
-        // Archive the Notion proposal page
         await notion(env, `/pages/${notionId}`, 'PATCH', { archived: true });
-        // Also mark Gmail message as read if gmailId provided
         const body = await request.json().catch(() => ({}));
         if (body.gmailId) {
           const token = await getGmailToken(env);
@@ -434,20 +513,20 @@ export default {
         return json({ ok: true });
       }
 
-      // GET /auth/gmail — start OAuth
+      // GET /auth/gmail — OAuth start (scope: gmail.modify for read + mark-as-read)
       if (pathname === '/auth/gmail' && method === 'GET') {
         const params = new URLSearchParams({
           client_id: env.GMAIL_CLIENT_ID,
           redirect_uri: `${url.origin}/auth/callback`,
           response_type: 'code',
-          scope: 'https://www.googleapis.com/auth/gmail.readonly',
+          scope: 'https://www.googleapis.com/auth/gmail.modify',
           access_type: 'offline',
           prompt: 'consent',
         });
         return Response.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params}`, 302);
       }
 
-      // GET /auth/callback — exchange code, show refresh_token for manual secret setup
+      // GET /auth/callback
       if (pathname === '/auth/callback' && method === 'GET') {
         const code = url.searchParams.get('code');
         if (!code) return json({ error: 'No code' }, 400);
@@ -475,14 +554,14 @@ export default {
       // GET /projects
       if (pathname === '/projects' && method === 'GET') {
         const [wmf, kk, mp] = await Promise.all([
-          notion(env, `/databases/${WMF_DB}/query`, 'POST', { sorts: [{ timestamp: 'created_time', direction: 'ascending' }], page_size: 30 }),
+          notion(env, `/databases/${WMF_DB}/query`,      'POST', { sorts: [{ timestamp: 'created_time', direction: 'ascending' }], page_size: 30 }),
           notion(env, `/databases/${KOELKAST_DB}/query`, 'POST', { sorts: [{ timestamp: 'created_time', direction: 'ascending' }], page_size: 30 }),
-          notion(env, `/databases/${MENU_DB}/query`, 'POST', { sorts: [{ timestamp: 'created_time', direction: 'ascending' }], page_size: 30 }),
+          notion(env, `/databases/${MENU_DB}/query`,     'POST', { sorts: [{ timestamp: 'created_time', direction: 'ascending' }], page_size: 30 }),
         ]);
         return json({
           weekmenuflyer: wmf.results.map(formatProjectEntry),
-          koelkast: kk.results.map(formatProjectEntry),
-          menuplanning: mp.results.map(formatProjectEntry),
+          koelkast:      kk.results.map(formatProjectEntry),
+          menuplanning:  mp.results.map(formatProjectEntry),
         });
       }
 
@@ -492,7 +571,7 @@ export default {
         const id = projMatch[1];
         const body = await request.json();
         const properties = {};
-        if (body.status !== undefined)   properties.Status   = body.status   ? { select: { name: body.status } }   : { select: null };
+        if (body.status !== undefined)   properties.Status    = body.status   ? { select: { name: body.status } }   : { select: null };
         if (body.opmerking !== undefined) properties.Opmerking = { rich_text: body.opmerking ? [{ text: { content: body.opmerking } }] : [] };
         await notion(env, `/pages/${id}`, 'PATCH', { properties });
         return json({ ok: true });

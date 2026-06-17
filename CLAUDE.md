@@ -59,14 +59,36 @@ Elke week horen deze taken te bestaan (allemaal Herhaling=Wekelijks):
 15. Inhaakdagen aanvullen
 
 ## STATUS_RULES (automatische projectstatus-updates)
-Als een taak wordt afgevinkt, updaten deze regels de projectdatabases:
-- **nieuw menu maken** → Menu: Menu gemaakt · Koelkast: Wachtend op GO Pieter · WMF: Wachtend op GO Pieter
-- **pieter heeft menu go** → Menu: Pieter GO · Koelkast: Bezig · WMF: Bezig
-- **weekmenuflyer maken** → WMF: Klaar voor proofread
-- **weekmenuflyer bestellen** → WMF: Besteld
-- **koelkast productinformatie** → Koelkast: Product informatie verwerkt
-- **koelkast bestelling plaatsen** → Koelkast: Bestelling geplaatst
-- enz. (zie STATUS_RULES in api/index.js)
+Als een taak wordt afgevinkt, updaten deze regels de projectdatabases.
+**Bron van waarheid = de app**, Notion is alleen opslag.
+
+### Koelkast
+| Taak | Status |
+|---|---|
+| Nieuw menu maken | Wachtend op GO Pieter |
+| Pieter heeft menu GO gegeven | Bezig |
+| Koelkast productinformatie invullen en sturen | Product informatie verwerkt |
+| Koelkast bestelling plaatsen | Bestelling geplaatst |
+| *(bezorgd — handmatig)* | Klaar |
+
+### Weekmenuflyer
+| Taak | Status |
+|---|---|
+| Nieuw menu maken | Wachtend op GO Pieter |
+| Pieter heeft menu GO gegeven | Bezig |
+| Weekmenuflyer maken | Klaar voor proofread |
+| Weekmenuflyer bestellen | Besteld |
+| *(geleverd Utrecht — handmatig)* | Geleverd |
+
+### Menuplanning
+| Taak | Status |
+|---|---|
+| Nieuw menu maken | Menu gemaakt |
+| Pieter heeft menu GO gegeven | Pieter GO |
+| Menu klaarzetten incl. nieuwe gerechten + foto's | Menu klaargezet in Shopify |
+| Import draaien | Import gedraaid |
+| Menucheck in verborgen collectie | Collectie gecheckt |
+| Live menucheck | Live gegaan |
 
 ## Gmail-voorstellen
 - Worker haalt elke 30 min nieuwe mails op en slaat actie-voorstellen op als Notion-taken (Project=Gmail)

@@ -96,10 +96,56 @@ Als een taak wordt afgevinkt, updaten deze regels de projectdatabases.
 - "Weigeren" archiveert de Notion-pagina en markeert mail als gelezen
 - Alleen mails met expliciete actieverzoeken worden voorgesteld (geen orderbevestigingen, noreply, losse ?)
 
-## Overzicht-tab
-- Groepeert taken per Doelweek
+## Overzicht-tab — gewenste layout
+
+Kolommen: **Week | Live | Menuplanning status | Menuplanning deadline | Flyer status | Flyer deadline | Koelkast status | Koelkast deadline**
+
+- **Week**: ISO-weeknummer (Week 26)
+- **Live**: de vrijdag van die ISO-week (= start ThuysVers menuweek). Berekend als `monday - 3 dagen`. Voorbeeld: week 26 = vr 19 jun 2026.
+- Per project: huidige status + deadline waarop die status bereikt had moeten zijn (afgeleid van Live-datum)
+- **Rood** als vandaag > deadline van de huidige status
+- Verleden weken (alles "Live gegaan"/"Geleverd"/"Klaar") hebben geen deadline meer
 - Weken verder dan curWeek+4 en eerder dan curWeek-4 zijn standaard ingeklapt
-- Toont per week ook de projectstatus (WMF · Koelkast · Menuplanning) uit de projectdatabases
+
+### Status-deadlines per project (offset t.o.v. Live-datum)
+
+**Koelkast**
+| Status | Deadline |
+|---|---|
+| Nog niet begonnen | — |
+| Wachtend op GO Pieter | Live − 4 weken |
+| Bezig | Live − 4 weken |
+| Product informatie verwerkt | Live − 2 weken |
+| Bestelling geplaatst | Live (0) |
+| Klaar | Live + 10 dagen |
+
+**Menuplanning**
+| Status | Deadline |
+|---|---|
+| Menu gemaakt | Live − 4 weken |
+| Pieter GO | Live − 4 weken |
+| Menu klaargezet in Shopify | Live − 2 weken |
+| Import gedraaid | Live − 2 weken |
+| Collectie gecheckt | Live − 1 week |
+| Live gegaan | Live (0) |
+
+**Weekmenuflyer**
+| Status | Deadline |
+|---|---|
+| Nog niet begonnen | — |
+| Wachtend op GO Pieter | Live − 4 weken |
+| Bezig | Live − 4 weken |
+| Klaar voor proofread | Live − 3 weken |
+| Besteld | Live − 16 dagen |
+| Geleverd | Live − 1 week |
+
+### Live-datum berekening
+```
+Live (vrijdag) van ISO-week N:
+  jan4 = 4 jan van huidig jaar
+  monday = jan4 - (jan4.day - 1) + (N-1)*7
+  friday = monday - 3
+```
 
 ## Mail-templates
 - **Retentie ads**: "ik heb de retentie ads voor week X in het mapje gezet" + link inline

@@ -1,29 +1,28 @@
 const TASKS_DB    = '47ae20e8-094b-475b-81fc-7efdf7f5d069';
-const WMF_DB      = '33d17522-60d6-8044-b429-debae08d8cab';
-const KOELKAST_DB = '87de96d6-051b-4035-959b-63fe753b1319';
-const MENU_DB     = '8808d20d-d534-4413-9f46-1904a430bc1c';
+const OVERZICHT_DB = '38217522-60d6-819b-ba0b-cbd50c11e372';
 
 const SYSTEM_PROJECTS = ['Weekmenuflyer', 'Menuplanning', 'Koelkast'];
 
+// col = kolomnaam in OVERZICHT_DB
 const STATUS_RULES = [
   { match: 'nieuw menu maken', updates: [
-    { db: MENU_DB,      status: 'Menu gemaakt' },
-    { db: KOELKAST_DB,  status: 'Wachtend op GO Pieter' },
-    { db: WMF_DB,       status: 'Wachtend op GO Pieter' },
+    { col: 'Menuplanning',  status: 'Menu gemaakt' },
+    { col: 'Koelkast',      status: 'Wachtend op GO Pieter' },
+    { col: 'Weekmenuflyer', status: 'Wachtend op GO Pieter' },
   ]},
   { match: 'pieter heeft menu go', updates: [
-    { db: MENU_DB,      status: 'Pieter GO' },
-    { db: KOELKAST_DB,  status: 'Bezig' },
-    { db: WMF_DB,       status: 'Bezig' },
+    { col: 'Menuplanning',  status: 'Pieter GO' },
+    { col: 'Koelkast',      status: 'Bezig' },
+    { col: 'Weekmenuflyer', status: 'Bezig' },
   ]},
-  { match: 'menu klaarzetten',           updates: [{ db: MENU_DB,      status: 'Menu klaargezet in Shopify' }] },
-  { match: 'import draaien',             updates: [{ db: MENU_DB,      status: 'Import gedraaid' }] },
-  { match: 'menucheck in verborgen',     updates: [{ db: MENU_DB,      status: 'Collectie gecheckt' }] },
-  { match: 'live menucheck',             updates: [{ db: MENU_DB,      status: 'Live gegaan' }] },
-  { match: 'weekmenuflyer maken',        updates: [{ db: WMF_DB,       status: 'Klaar voor proofread' }] },
-  { match: 'weekmenuflyer bestellen',    updates: [{ db: WMF_DB,       status: 'Besteld' }] },
-  { match: 'koelkast productinformatie', updates: [{ db: KOELKAST_DB,  status: 'Product informatie verwerkt' }] },
-  { match: 'koelkast bestelling',        updates: [{ db: KOELKAST_DB,  status: 'Bestelling geplaatst' }] },
+  { match: 'menu klaarzetten',           updates: [{ col: 'Menuplanning',  status: 'Menu klaargezet in Shopify' }] },
+  { match: 'import draaien',             updates: [{ col: 'Menuplanning',  status: 'Import gedraaid' }] },
+  { match: 'menucheck in verborgen',     updates: [{ col: 'Menuplanning',  status: 'Collectie gecheckt' }] },
+  { match: 'live menucheck',             updates: [{ col: 'Menuplanning',  status: 'Live gegaan' }] },
+  { match: 'weekmenuflyer maken',        updates: [{ col: 'Weekmenuflyer', status: 'Klaar voor proofread' }] },
+  { match: 'weekmenuflyer bestellen',    updates: [{ col: 'Weekmenuflyer', status: 'Besteld' }] },
+  { match: 'koelkast productinformatie', updates: [{ col: 'Koelkast',      status: 'Product informatie verwerkt' }] },
+  { match: 'koelkast bestelling',        updates: [{ col: 'Koelkast',      status: 'Bestelling geplaatst' }] },
 ];
 
 const HERHALING_DAYS = { 'Wekelijks': 7, '2 wekelijks': 14, '4 wekelijks': 28 };
@@ -34,28 +33,48 @@ function addDays(dateStr, days) {
   return d.toISOString().slice(0, 10);
 }
 
+async function queryAllOvz(env) {
+  let results = [], cursor;
+  do {
+    const body = { page_size: 100, sorts: [{ timestamp: 'created_time', direction: 'ascending' }] };
+    if (cursor) body.start_cursor = cursor;
+    const data = await notion(env, `/databases/${OVERZICHT_DB}/query`, 'POST', body);
+    results.push(...data.results);
+    cursor = data.has_more ? data.next_cursor : null;
+  } while (cursor);
+  return results;
+}
+
+function weekNumFromTitle(title) {
+  const m = (title || '').match(/\d+/);
+  return m ? parseInt(m[0]) : null;
+}
+
 async function maybeUpdateProjectStatus(env, taskName, doelweek) {
   if (!taskName || !doelweek) return;
   const lower = taskName.toLowerCase();
   const rule = STATUS_RULES.find(r => lower.includes(r.match));
   if (!rule) return;
-  const wMatch = doelweek.match(/\d+/);
-  if (!wMatch) return;
-  const targetWeekNum = parseInt(wMatch[0]);
-  await Promise.all(rule.updates.map(async ({ db, status }) => {
-    const data = await notion(env, `/databases/${db}/query`, 'POST', { page_size: 100 });
-    const entry = data.results.find(p => {
-      const tp = Object.values(p.properties).find(x => x.type === 'title');
-      const title = tp?.title?.[0]?.plain_text || '';
-      const m = title.match(/\d+/);
-      return m && parseInt(m[0]) === targetWeekNum;
+  const targetWeekNum = weekNumFromTitle(doelweek);
+  if (!targetWeekNum) return;
+
+  const rows = await queryAllOvz(env);
+  const entry = rows.find(p => {
+    const tp = Object.values(p.properties).find(x => x.type === 'title');
+    return weekNumFromTitle(tp?.title?.[0]?.plain_text) === targetWeekNum;
+  });
+
+  const properties = {};
+  rule.updates.forEach(({ col, status }) => { properties[col] = { select: { name: status } }; });
+
+  if (entry) {
+    await notion(env, `/pages/${entry.id}`, 'PATCH', { properties });
+  } else {
+    await notion(env, '/pages', 'POST', {
+      parent: { database_id: OVERZICHT_DB },
+      properties: { Week: { title: [{ text: { content: doelweek } }] }, ...properties },
     });
-    if (entry) {
-      await notion(env, `/pages/${entry.id}`, 'PATCH', {
-        properties: { Status: { select: { name: status } } },
-      });
-    }
-  }));
+  }
 }
 
 const cors = {
@@ -101,15 +120,14 @@ function formatTask(page) {
   };
 }
 
-function formatProjectEntry(page) {
-  const titleEntry = Object.entries(page.properties).find(([, v]) => v.type === 'title');
+function formatOvzRow(page) {
+  const tp = Object.entries(page.properties).find(([, v]) => v.type === 'title');
   return {
     id: page.id,
-    week: titleEntry?.[1]?.title?.[0]?.plain_text || '',
-    titlePropName: titleEntry?.[0] || 'Name',
-    status: page.properties.Status?.select?.name || null,
-    statusColor: page.properties.Status?.select?.color || null,
-    opmerking: page.properties.Opmerking?.rich_text?.[0]?.plain_text || '',
+    week: tp?.[1]?.title?.[0]?.plain_text || '',
+    menuplanning:  page.properties.Menuplanning?.select?.name  || null,
+    weekmenuflyer: page.properties.Weekmenuflyer?.select?.name || null,
+    koelkast:      page.properties.Koelkast?.select?.name      || null,
   };
 }
 
@@ -415,12 +433,10 @@ export default {
           if (body.herhaling && HERHALING_DAYS[body.herhaling] && body.deadline) {
             const nextDeadline = addDays(body.deadline, HERHALING_DAYS[body.herhaling]);
 
-            // Don't create if more than 4 weeks out
             const fourWeeksOut = new Date();
             fourWeeksOut.setUTCDate(fourWeeksOut.getUTCDate() + 28);
 
             if (new Date(nextDeadline + 'T12:00:00Z') <= fourWeeksOut) {
-              // Prevent duplicates: skip if unchecked task with same name + deadline exists
               const dupCheck = await notion(env, `/databases/${TASKS_DB}/query`, 'POST', {
                 filter: {
                   and: [
@@ -518,7 +534,7 @@ export default {
         return json({ ok: true });
       }
 
-      // GET /auth/gmail — OAuth start (scope: gmail.modify for read + mark-as-read)
+      // GET /auth/gmail
       if (pathname === '/auth/gmail' && method === 'GET') {
         const params = new URLSearchParams({
           client_id: env.GMAIL_CLIENT_ID,
@@ -556,55 +572,60 @@ export default {
         </body></html>`, { headers: { 'Content-Type': 'text/html' } });
       }
 
-      // GET /projects
+      // GET /projects — overzicht uit gecombineerde DB
       if (pathname === '/projects' && method === 'GET') {
-        async function queryAll(db) {
-          let results = [], cursor;
-          do {
-            const body = { page_size: 100, sorts: [{ timestamp: 'created_time', direction: 'ascending' }] };
-            if (cursor) body.start_cursor = cursor;
-            const data = await notion(env, `/databases/${db}/query`, 'POST', body);
-            results.push(...data.results);
-            cursor = data.has_more ? data.next_cursor : null;
-          } while (cursor);
-          return results;
-        }
-        const [wmf, kk, mp] = await Promise.all([
-          queryAll(WMF_DB), queryAll(KOELKAST_DB), queryAll(MENU_DB),
-        ]);
+        const rows = (await queryAllOvz(env)).map(formatOvzRow);
         return json({
-          weekmenuflyer: wmf.map(formatProjectEntry),
-          koelkast:      kk.map(formatProjectEntry),
-          menuplanning:  mp.map(formatProjectEntry),
+          weekmenuflyer: rows.map(r => ({ id: r.id, week: r.week, status: r.weekmenuflyer })),
+          koelkast:      rows.map(r => ({ id: r.id, week: r.week, status: r.koelkast })),
+          menuplanning:  rows.map(r => ({ id: r.id, week: r.week, status: r.menuplanning })),
         });
       }
 
-      // POST /projects — create new week entry
+      // POST /projects — status instellen (maakt rij aan als die nog niet bestaat)
       if (pathname === '/projects' && method === 'POST') {
         const body = await request.json();
-        const DB_MAP = { weekmenuflyer: WMF_DB, koelkast: KOELKAST_DB, menuplanning: MENU_DB };
-        const db = DB_MAP[body.proj];
-        if (!db) return json({ error: 'Onbekend project' }, 400);
-        const dbMeta = await notion(env, `/databases/${db}`);
-        const titlePropName = Object.entries(dbMeta.properties).find(([, v]) => v.type === 'title')?.[0] || 'Name';
-        const props = { [titlePropName]: { title: [{ text: { content: body.week } }] } };
-        if (body.status) props.Status = { select: { name: body.status } };
-        const page = await notion(env, '/pages', 'POST', { parent: { database_id: db }, properties: props });
-        return json({ id: page.id, titlePropName });
+        const COL_MAP = { weekmenuflyer: 'Weekmenuflyer', koelkast: 'Koelkast', menuplanning: 'Menuplanning' };
+        const col = COL_MAP[body.proj];
+        if (!col) return json({ error: 'Onbekend project' }, 400);
+
+        const targetNum = weekNumFromTitle(body.week);
+        const rows = await queryAllOvz(env);
+        const existing = rows.find(p => {
+          const tp = Object.values(p.properties).find(x => x.type === 'title');
+          return weekNumFromTitle(tp?.title?.[0]?.plain_text) === targetNum;
+        });
+
+        if (existing) {
+          if (body.status) {
+            await notion(env, `/pages/${existing.id}`, 'PATCH', {
+              properties: { [col]: { select: { name: body.status } } },
+            });
+          }
+          return json({ id: existing.id });
+        } else {
+          const props = { Week: { title: [{ text: { content: body.week } }] } };
+          if (body.status) props[col] = { select: { name: body.status } };
+          const page = await notion(env, '/pages', 'POST', {
+            parent: { database_id: OVERZICHT_DB },
+            properties: props,
+          });
+          return json({ id: page.id });
+        }
       }
 
-      // PATCH /projects/:id
+      // PATCH /projects/:id — status updaten (col bepaald door proj in body)
       const projMatch = pathname.match(/^\/projects\/([a-f0-9-]+)$/);
       if (projMatch && method === 'PATCH') {
         const id = projMatch[1];
         const body = await request.json();
-        const properties = {};
-        if (body.status !== undefined)    properties.Status    = body.status   ? { select: { name: body.status } }   : { select: null };
-        if (body.opmerking !== undefined) properties.Opmerking = { rich_text: body.opmerking ? [{ text: { content: body.opmerking } }] : [] };
-        if (body.naam !== undefined && body.titlePropName) {
-          properties[body.titlePropName] = { title: [{ text: { content: body.naam } }] };
+        const COL_MAP = { weekmenuflyer: 'Weekmenuflyer', koelkast: 'Koelkast', menuplanning: 'Menuplanning' };
+        const col = body.proj ? COL_MAP[body.proj] : null;
+        if (col && body.status !== undefined) {
+          await notion(env, `/pages/${id}`, 'PATCH', {
+            properties: { [col]: body.status ? { select: { name: body.status } } : { select: null } },
+          });
         }
-        await notion(env, `/pages/${id}`, 'PATCH', { properties });
         return json({ ok: true });
       }
 

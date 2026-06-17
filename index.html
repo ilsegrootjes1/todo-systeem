@@ -860,7 +860,7 @@ async function setStatus(newStatus) {
       if (!r.ok) throw new Error(data.error || 'Aanmaken mislukt');
       el.dataset.id = data.id;
       if (!projects[proj]) projects[proj] = [];
-      projects[proj].push({ id: data.id, week, status: newStatus, titlePropName: data.titlePropName, opmerking: '' });
+      projects[proj].push({ id: data.id, week, status: newStatus });
     } else {
       const arr = projects[proj];
       const entry = arr?.find(e => e.id === id);
@@ -868,7 +868,7 @@ async function setStatus(newStatus) {
       await fetch(`${API}/projects/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus }),
+        body: JSON.stringify({ status: newStatus, proj }),
       });
     }
     toast('Status bijgewerkt');
@@ -1580,7 +1580,7 @@ document.getElementById('btnProjEntrySave').onclick = async () => {
     await fetch(`${API}/projects/${entry.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ naam, titlePropName: entry.titlePropName, status, opmerking }),
+      body: JSON.stringify({ status, proj }),
     });
 
     // Update local data

@@ -502,9 +502,13 @@ function fridayOfWeek(n) {
   return fri;
 }
 
-// Deadline date for reaching a specific status for a given week
-function statusDeadlineDate(proj, status, weekN) {
-  const offset = STATUS_DEADLINES[proj]?.[status];
+// Deadline for reaching the NEXT status (= the upcoming milestone)
+function nextStatusDeadlineDate(proj, currentStatus, weekN) {
+  const options = STATUS_OPTIONS[proj] || [];
+  const idx = options.indexOf(currentStatus);
+  if (idx === -1 || idx === options.length - 1) return null;
+  const nextStatus = options[idx + 1];
+  const offset = STATUS_DEADLINES[proj]?.[nextStatus];
   if (offset === undefined) return null;
   const d = fridayOfWeek(weekN);
   d.setDate(d.getDate() + offset);
@@ -732,7 +736,7 @@ function renderOverzicht() {
 
       if (s) {
         statusCell = `<td><span class="status-badge ${statusClass(s)}" data-proj="${k}" data-id="${entry.id}" onclick="openStatusMenu(event,this)">${esc(s)}</span></td>`;
-        const dl = statusDeadlineDate(k, s, wn);
+        const dl = nextStatusDeadlineDate(k, s, wn);
         if (dl) {
           const dlIso = dl.toISOString().slice(0, 10);
           const late  = !isPast && dlIso < todayStr;

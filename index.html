@@ -732,27 +732,25 @@ function renderOverzicht() {
     const cells = ['menuplanning','weekmenuflyer','koelkast'].map(k => {
       const entry = map[k][wn];
       const s = entry?.status || null;
-      let statusCell, deadlineCell;
 
       if (s) {
-        statusCell = `<td><span class="status-badge ${statusClass(s)}" data-proj="${k}" data-id="${entry.id}" onclick="openStatusMenu(event,this)">${esc(s)}</span></td>`;
-        const dl = nextStatusDeadlineDate(k, s, wn);
-        if (dl) {
+        const options = STATUS_OPTIONS[k] || [];
+        const idx = options.indexOf(s);
+        const nextStatus = idx !== -1 && idx < options.length - 1 ? options[idx + 1] : null;
+        const dl = nextStatus ? nextStatusDeadlineDate(k, s, wn) : null;
+        let nextLine = '';
+        if (nextStatus && dl) {
           const dlIso = dl.toISOString().slice(0, 10);
           const late  = !isPast && dlIso < todayStr;
           if (late) hasOverdue = true;
-          deadlineCell = `<td style="font-size:11px;font-weight:${late?'700':'400'};color:${late?'#ef4444':'#9ca3af'};white-space:nowrap">${dl.getDate()} ${MS[dl.getMonth()]}</td>`;
-        } else {
-          deadlineCell = `<td></td>`;
+          const color = late ? '#ef4444' : '#9ca3af';
+          const weight = late ? '700' : '400';
+          nextLine = `<div style="font-size:10px;color:${color};font-weight:${weight};margin-top:3px;white-space:nowrap">${esc(nextStatus.toLowerCase())} — ${dl.getDate()} ${MS[dl.getMonth()]}</div>`;
         }
-      } else if (isPast || isCurrent) {
-        statusCell   = `<td><span class="status-badge s-green">Klaar</span></td>`;
-        deadlineCell = `<td></td>`;
-      } else {
-        statusCell   = `<td><span class="status-badge empty" data-proj="${k}" data-id="" onclick="openStatusMenu(event,this)">—</span></td>`;
-        deadlineCell = `<td></td>`;
+        return `<td><span class="status-badge ${statusClass(s)}" data-proj="${k}" data-id="${entry.id}" onclick="openStatusMenu(event,this)">${esc(s)}</span>${nextLine}</td>`;
       }
-      return statusCell + deadlineCell;
+      if (isPast || isCurrent) return `<td><span class="status-badge s-green">Klaar</span></td>`;
+      return `<td><span class="status-badge empty" data-proj="${k}" data-id="" onclick="openStatusMenu(event,this)">—</span></td>`;
     }).join('');
 
     const rowStyleParts = [];
@@ -763,14 +761,14 @@ function renderOverzicht() {
     if (!pastToggleInserted && wn === pastCutoff) {
       pastToggleInserted = true;
       rows.push(`<tr class="overzicht-toggle-row">
-        <td colspan="8" style="text-align:center;padding:8px 0;cursor:pointer;color:#9ca3af;font-size:12px;user-select:none" onclick="toggleFarPast(this)">
+        <td colspan="5" style="text-align:center;padding:8px 0;cursor:pointer;color:#9ca3af;font-size:12px;user-select:none" onclick="toggleFarPast(this)">
           ▲ Toon weken eerder dan -4
         </td>
       </tr>`);
     }
     if (wn === futureCutoff + 1) {
       rows.push(`<tr class="overzicht-toggle-row">
-        <td colspan="8" style="text-align:center;padding:8px 0;cursor:pointer;color:#9ca3af;font-size:12px;user-select:none" onclick="toggleFarFuture(this)">
+        <td colspan="5" style="text-align:center;padding:8px 0;cursor:pointer;color:#9ca3af;font-size:12px;user-select:none" onclick="toggleFarFuture(this)">
           ▼ Toon weken verder dan +4
         </td>
       </tr>`);
@@ -796,11 +794,8 @@ function renderOverzicht() {
         <th>Week</th>
         <th>Live</th>
         <th style="color:#6d28d9">Menuplanning</th>
-        <th style="color:#bbb;font-weight:500;text-transform:none">deadline</th>
         <th style="color:#1d4ed8">Flyer</th>
-        <th style="color:#bbb;font-weight:500;text-transform:none">deadline</th>
         <th style="color:#c2410c">Koelkast</th>
-        <th style="color:#bbb;font-weight:500;text-transform:none">deadline</th>
       </tr></thead>
       <tbody>${rows.join('')}</tbody>
     </table>

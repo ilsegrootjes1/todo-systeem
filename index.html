@@ -428,6 +428,32 @@ const STATUS_OPTIONS = {
   menuplanning:  ['Menu gemaakt','Pieter GO','Menu klaargezet in Shopify','Import gedraaid','Collectie gecheckt','Live gegaan'],
 };
 
+// Deadline offset (days from Live/Friday) for each status — from the rules spreadsheet
+const STATUS_DEADLINES = {
+  menuplanning: {
+    'Menu gemaakt':               -28,
+    'Pieter GO':                  -28,
+    'Menu klaargezet in Shopify': -14,
+    'Import gedraaid':            -14,
+    'Collectie gecheckt':          -7,
+    'Live gegaan':                  0,
+  },
+  weekmenuflyer: {
+    'Wachtend op GO Pieter': -28,
+    'Bezig':                 -28,
+    'Klaar voor proofread':  -21,
+    'Besteld':               -16,
+    'Geleverd':               -7,
+  },
+  koelkast: {
+    'Wachtend op GO Pieter':       -28,
+    'Bezig':                       -28,
+    'Product informatie verwerkt': -14,
+    'Bestelling geplaatst':          0,
+    'Klaar':                        10,
+  },
+};
+
 function statusClass(s) {
   if (!s) return 'empty';
   const green  = ['Geleverd','Live gegaan','Klaar'];
@@ -462,6 +488,27 @@ function weekDates(wStr) {
   const thu = new Date(fri);    thu.setDate(fri.getDate() + 6);
   const fmt = d => `${d.getDate()} ${MS[d.getMonth()]}`;
   return `vr ${fmt(fri)} – do ${fmt(thu)}`;
+}
+
+// Friday (= Live date) of ISO week N
+function fridayOfWeek(n) {
+  const yr = new Date().getFullYear();
+  const jan4 = new Date(yr, 0, 4);
+  const jan4Day = jan4.getDay() || 7;
+  const monday = new Date(jan4);
+  monday.setDate(jan4.getDate() - (jan4Day - 1) + (n - 1) * 7);
+  const fri = new Date(monday);
+  fri.setDate(monday.getDate() - 3);
+  return fri;
+}
+
+// Deadline date for reaching a specific status for a given week
+function statusDeadlineDate(proj, status, weekN) {
+  const offset = STATUS_DEADLINES[proj]?.[status];
+  if (offset === undefined) return null;
+  const d = fridayOfWeek(weekN);
+  d.setDate(d.getDate() + offset);
+  return d;
 }
 
 function isLate(d)  { return d && d < todayStr; }
@@ -647,7 +694,7 @@ function renderOverzicht() {
   if (!Object.keys(projects).length) return;
 
   const map = {};
-  ['weekmenuflyer','menuplanning','koelkast'].forEach(k => {
+  ['menuplanning','weekmenuflyer','koelkast'].forEach(k => {
     map[k] = {};
     (projects[k] || []).forEach(e => {
       const n = weekNum(e.week);
@@ -672,43 +719,69 @@ function renderOverzicht() {
     if (isFarPast)   rowClass += (rowClass ? ' ' : '') + 'far-past-row';
     if (isFarFuture) rowClass += (rowClass ? ' ' : '') + 'far-future-row';
 
-    const cells = ['weekmenuflyer','menuplanning','koelkast'].map(k => {
+    const live = fridayOfWeek(wn);
+    const liveStr = `${live.getDate()} ${MS[live.getMonth()]}`;
+    const liveIso = live.toISOString().slice(0, 10);
+
+    // Columns: menuplanning, weekmenuflyer (=Flyer), koelkast — matches spreadsheet order
+    let hasOverdue = false;
+    const cells = ['menuplanning','weekmenuflyer','koelkast'].map(k => {
       const entry = map[k][wn];
       const s = entry?.status || null;
+      let statusCell, deadlineCell;
+
       if (s) {
-        return `<td><span class="status-badge ${statusClass(s)}" data-proj="${k}" data-id="${entry.id}" onclick="openStatusMenu(event,this)">${esc(s)}</span></td>`;
+        statusCell = `<td><span class="status-badge ${statusClass(s)}" data-proj="${k}" data-id="${entry.id}" onclick="openStatusMenu(event,this)">${esc(s)}</span></td>`;
+        const dl = statusDeadlineDate(k, s, wn);
+        if (dl) {
+          const dlIso = dl.toISOString().slice(0, 10);
+          const late  = !isPast && dlIso < todayStr;
+          if (late) hasOverdue = true;
+          deadlineCell = `<td style="font-size:11px;font-weight:${late?'700':'400'};color:${late?'#ef4444':'#9ca3af'};white-space:nowrap">${dl.getDate()} ${MS[dl.getMonth()]}</td>`;
+        } else {
+          deadlineCell = `<td></td>`;
+        }
+      } else if (isPast || isCurrent) {
+        statusCell   = `<td><span class="status-badge s-green">Klaar</span></td>`;
+        deadlineCell = `<td></td>`;
+      } else {
+        statusCell   = `<td><span class="status-badge empty" data-proj="${k}" data-id="" onclick="openStatusMenu(event,this)">—</span></td>`;
+        deadlineCell = `<td></td>`;
       }
-      if (isPast || isCurrent) return `<td><span class="status-badge s-green">Klaar</span></td>`;
-      return `<td><span class="status-badge empty" data-proj="${k}" data-id="" onclick="openStatusMenu(event,this)">—</span></td>`;
+      return statusCell + deadlineCell;
     }).join('');
+
+    const rowStyleParts = [];
+    if (isFarPast || isFarFuture) rowStyleParts.push('display:none');
+    else if (hasOverdue) rowStyleParts.push('background:#fff5f5');
+    const rowStyle = rowStyleParts.length ? ` style="${rowStyleParts.join(';')}"` : '';
 
     if (!pastToggleInserted && wn === pastCutoff) {
       pastToggleInserted = true;
       rows.push(`<tr class="overzicht-toggle-row">
-        <td colspan="4" style="text-align:center;padding:8px 0;cursor:pointer;color:#9ca3af;font-size:12px;user-select:none" onclick="toggleFarPast(this)">
+        <td colspan="8" style="text-align:center;padding:8px 0;cursor:pointer;color:#9ca3af;font-size:12px;user-select:none" onclick="toggleFarPast(this)">
           ▲ Toon weken eerder dan -4
         </td>
       </tr>`);
     }
     if (wn === futureCutoff + 1) {
       rows.push(`<tr class="overzicht-toggle-row">
-        <td colspan="4" style="text-align:center;padding:8px 0;cursor:pointer;color:#9ca3af;font-size:12px;user-select:none" onclick="toggleFarFuture(this)">
+        <td colspan="8" style="text-align:center;padding:8px 0;cursor:pointer;color:#9ca3af;font-size:12px;user-select:none" onclick="toggleFarFuture(this)">
           ▼ Toon weken verder dan +4
         </td>
       </tr>`);
     }
 
-    // Collect entry IDs for this row so the week cell can open the edit modal
-    const rowEntries = ['weekmenuflyer','menuplanning','koelkast'].map(k => {
+    const rowEntries = ['menuplanning','weekmenuflyer','koelkast'].map(k => {
       const e = map[k][wn];
       return e ? `${k}:${e.id}` : '';
     }).filter(Boolean).join(',');
 
-    rows.push(`<tr${rowClass ? ` class="${rowClass}"` : ''} style="${isFarPast || isFarFuture ? 'display:none' : ''}">
+    rows.push(`<tr${rowClass ? ` class="${rowClass}"` : ''}${rowStyle}>
       <td class="week-cell${isCurrent ? ' current' : ''}" style="cursor:pointer" onclick="openProjRowMenu(event,${wn},'${rowEntries}')" title="Bewerken">
-        <div>Week ${wn}</div>
-        <div style="font-size:10px;color:#bbb;font-weight:400;margin-top:1px">${weekDates(`Week ${wn}`)}</div>
+        Week ${wn}
       </td>
+      <td style="font-size:12px;color:${isPast && liveIso < todayStr ? '#ef4444' : '#6b7280'};font-weight:500;white-space:nowrap">${liveStr}</td>
       ${cells}
     </tr>`);
   }
@@ -717,9 +790,13 @@ function renderOverzicht() {
     <table>
       <thead><tr>
         <th>Week</th>
-        <th style="color:#1d4ed8">Weekmenuflyer</th>
+        <th>Live</th>
         <th style="color:#6d28d9">Menuplanning</th>
+        <th style="color:#bbb;font-weight:500;text-transform:none">deadline</th>
+        <th style="color:#1d4ed8">Flyer</th>
+        <th style="color:#bbb;font-weight:500;text-transform:none">deadline</th>
         <th style="color:#c2410c">Koelkast</th>
+        <th style="color:#bbb;font-weight:500;text-transform:none">deadline</th>
       </tr></thead>
       <tbody>${rows.join('')}</tbody>
     </table>

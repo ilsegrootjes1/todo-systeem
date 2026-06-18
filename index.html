@@ -326,6 +326,10 @@ tr:last-child td { border-bottom: none; }
     <h3 id="mailTitle">Mail versturen</h3>
     <div class="mail-subtitle" id="mailSubtitle"></div>
     <div class="contacts" id="contactList"></div>
+    <div class="mail-note" style="margin-top:6px">
+      <label>Of stuur naar ander adres</label>
+      <input type="email" id="mailCustomEmail" placeholder="naam@voorbeeld.nl" autocomplete="email" />
+    </div>
     <div class="mail-note">
       <label>Link (optioneel)</label>
       <input type="text" id="mailLink" placeholder="bijv. Canva link" />
@@ -1237,7 +1241,7 @@ document.getElementById('btnImportAdd').onclick = async () => {
 
 // ── Mail modal ──
 const CONTACTS = [
-  { name: 'Aaron',  email: 'aron@thuysvers.nl' },
+  { name: 'Aron',   email: 'aron@thuysvers.nl' },
   { name: 'Marcus', email: 'Marcus.leloux@thuysvers.nl' },
   { name: 'Pieter', email: 'Pieter@thuysvers.nl' },
 ];
@@ -1303,9 +1307,10 @@ function openMailModal(week, taskTitle) {
   selectedContacts = new Set();
   document.getElementById('mailTitle').textContent    = taskTitle || (week ? `Mail over ${week}` : 'Mail versturen');
   document.getElementById('mailSubtitle').textContent = week ? weekDates(week) : '';
-  document.getElementById('mailLink').value    = '';
-  document.getElementById('mailBody').value    = '';
-  document.getElementById('mailSubject').value = '';
+  document.getElementById('mailLink').value        = '';
+  document.getElementById('mailBody').value        = '';
+  document.getElementById('mailSubject').value     = '';
+  document.getElementById('mailCustomEmail').value = '';
 
   document.getElementById('contactList').innerHTML = CONTACTS.map((c,i) => `
     <div class="contact-row" data-ci="${i}">
@@ -1327,13 +1332,21 @@ function openMailModal(week, taskTitle) {
         row.classList.add('selected');
         document.getElementById(`cc-${i}`).textContent = '✓';
       }
-      document.getElementById('btnMailSend').disabled = selectedContacts.size === 0;
+      const custom = document.getElementById('mailCustomEmail').value.trim();
+      document.getElementById('btnMailSend').disabled = selectedContacts.size === 0 && !custom;
       updateMailCompose();
     });
   });
 
+  document.getElementById('mailCustomEmail').addEventListener('input', () => {
+    const custom = document.getElementById('mailCustomEmail').value.trim();
+    document.getElementById('btnMailSend').disabled = selectedContacts.size === 0 && !custom;
+    if (selectedContacts.size > 0 || custom) updateMailCompose();
+  });
+
   document.getElementById('mailLink').addEventListener('input', () => {
-    if (selectedContacts.size > 0) updateMailCompose();
+    const custom = document.getElementById('mailCustomEmail').value.trim();
+    if (selectedContacts.size > 0 || custom) updateMailCompose();
   });
 
   document.getElementById('btnMailSend').disabled = true;
@@ -1348,7 +1361,8 @@ document.getElementById('mailOverlay').addEventListener('click', e => {
 document.getElementById('btnMailSend').onclick = async () => {
   const btn = document.getElementById('btnMailSend');
   btn.textContent = 'Versturen...'; btn.disabled = true;
-  const to      = [...selectedContacts].map(i => CONTACTS[i].email);
+  const custom  = document.getElementById('mailCustomEmail').value.trim();
+  const to      = [...[...selectedContacts].map(i => CONTACTS[i].email), ...(custom ? [custom] : [])];
   const subject = document.getElementById('mailSubject').value.trim();
   const text    = document.getElementById('mailBody').value.trim();
   try {

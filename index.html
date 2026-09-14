@@ -66,23 +66,6 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 /* ── Recurring badge ── */
 .recur-badge { display:inline-flex; align-items:center; gap:3px; font-size:10px; font-weight:600; color:#6d28d9; background:#f5f3ff; border-radius:4px; padding:2px 6px; margin-left:4px; }
 
-/* ── Mail proposals ── */
-.proposals-section { background:white; border-radius:12px; border:1px solid #e5e7eb; overflow:hidden; margin-bottom:4px; }
-.proposals-header { display:flex; align-items:center; justify-content:space-between; padding:12px 14px 10px; border-bottom:1px solid #f3f4f6; }
-.proposals-header h3 { font-size:13px; font-weight:700; color:#1a1a1a; }
-.proposals-header span { font-size:11px; color:#9ca3af; }
-.proposal-item { display:flex; align-items:flex-start; gap:10px; padding:10px 14px; border-bottom:1px solid #f9fafb; }
-.proposal-item:last-child { border-bottom:none; }
-.proposal-info { flex:1; min-width:0; }
-.proposal-subject { font-size:13px; font-weight:600; color:#1a1a1a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.proposal-from { font-size:11px; color:#9ca3af; margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.proposal-summary { font-size:12px; color:#4b5563; margin-top:5px; line-height:1.4; }
-.proposal-actions { display:flex; gap:6px; flex-shrink:0; align-self:flex-start; }
-.btn-proposal-add { background:#1a1a1a; color:white; border:none; border-radius:7px; padding:5px 11px; font-size:12px; font-weight:600; cursor:pointer; white-space:nowrap; }
-.btn-proposal-add:hover { background:#333; }
-.btn-proposal-dismiss { background:white; color:#6b7280; border:1.5px solid #e5e7eb; border-radius:7px; padding:5px 9px; font-size:12px; font-weight:600; cursor:pointer; white-space:nowrap; }
-.btn-proposal-dismiss:hover { border-color:#9ca3af; color:#374151; }
-
 /* ── Overzicht ── */
 .overzicht { padding: 16px; max-width: 800px; margin: 0 auto; }
 .ov-scroll { overflow-x: auto; }
@@ -202,10 +185,6 @@ tr:last-child td { border-bottom: none; }
       <button class="btn-icon" id="btnSettings" title="Projecten beheren">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
       </button>
-      <button class="btn-icon" id="btnMailImport">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><polyline points="2,4 12,13 22,4"/></svg>
-        Uit mail
-      </button>
       <button class="btn-add" id="btnAdd">+ Nieuw</button>
     </div>
   </div>
@@ -218,7 +197,6 @@ tr:last-child td { border-bottom: none; }
 </div>
 
 <div id="viewTaken">
-  <div class="main" id="mailProposals" style="display:none;max-width:700px;margin:0 auto;padding:12px 16px 0"></div>
   <div class="main" id="takenMain"><div class="empty">Laden...</div></div>
 </div>
 
@@ -345,42 +323,6 @@ tr:last-child td { border-bottom: none; }
     <div class="mail-btns">
       <button class="btn-mail-cancel" id="btnMailCancel">Annuleren</button>
       <button class="btn-mail-send" id="btnMailSend">Verstuur</button>
-    </div>
-  </div>
-</div>
-
-<!-- Mail import modal -->
-<div class="overlay" id="mailImportOverlay">
-  <div class="modal">
-    <h2>Voorstel uit mail</h2>
-    <div class="fg"><label>Plak hier de tekst van je e-mail</label>
-      <textarea id="mailImportText" placeholder="Kopieer de inhoud van je mail en plak hem hier..." style="min-height:140px;resize:vertical"></textarea>
-    </div>
-    <div id="mailImportSuggestions" style="display:none">
-      <div style="font-size:12px;font-weight:600;color:#6b6b6b;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Voorstel</div>
-      <div style="background:#f9fafb;border:1.5px solid #e5e7eb;border-radius:10px;padding:14px 14px 10px">
-        <div class="fg" style="margin-bottom:8px"><label>Taak</label><input type="text" id="importTaak" /></div>
-        <div class="fg" style="margin-bottom:8px"><label>Project</label><select id="importProject"><option value="">— Geen project —</option></select></div>
-        <div style="display:flex;gap:10px;flex-wrap:wrap">
-          <div class="fg" style="margin-bottom:0;flex:0 0 auto"><label>Doelweek</label>
-            <input type="number" id="importWeek" min="1" max="52" style="width:90px" />
-          </div>
-          <div class="fg" style="margin-bottom:0;flex:1"><label>Deadline</label><input type="date" id="importDeadline" /></div>
-        </div>
-        <div class="fg" style="margin-top:8px;margin-bottom:0"><label>Herhaling</label>
-          <select id="importHerhaling">
-            <option value="">— Eenmalig —</option>
-            <option value="Wekelijks">Elke week</option>
-            <option value="2 wekelijks">Elke 2 weken</option>
-            <option value="4 wekelijks">Elke 4 weken</option>
-          </select>
-        </div>
-      </div>
-    </div>
-    <div class="modal-btns" style="margin-top:16px">
-      <button class="btn-cancel" id="btnImportCancel">Annuleren</button>
-      <button class="btn-save" id="btnImportAnalyse" style="background:#374151">Analyseer mail</button>
-      <button class="btn-save" id="btnImportAdd" style="display:none">Toevoegen</button>
     </div>
   </div>
 </div>
@@ -565,7 +507,6 @@ document.querySelectorAll('.nav-tab').forEach(btn => {
     document.getElementById('viewGeschiedenis').style.display= currentView === 'geschiedenis'? '' : 'none';
     document.getElementById('projFilters').style.display     = currentView === 'taken'      ? 'flex' : 'none';
     document.getElementById('btnAdd').style.display          = currentView === 'taken'      ? '' : 'none';
-    document.getElementById('btnMailImport').style.display   = currentView === 'taken'      ? '' : 'none';
     if (currentView === 'overzicht') loadProjects();
     if (currentView === 'geschiedenis') loadRecent();
   });
@@ -869,13 +810,16 @@ async function setStatus(newStatus) {
       const arr = projects[proj];
       const entry = arr?.find(e => e.id === id);
       if (entry) entry.status = newStatus;
-      await fetch(`${API}/projects/${id}`, {
+      const r = await fetch(`${API}/projects/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus, proj }),
       });
+      if (!r.ok) throw new Error('Opslaan mislukt');
     }
     toast('Status bijgewerkt');
+    // Bijbehorende taken kunnen door deze statuswijziging zijn afgevinkt
+    await Promise.all([loadTasks(), loadDoneTasks()]);
   } catch {
     el.textContent = prev;
     el.className = prevClass;
@@ -964,11 +908,6 @@ document.getElementById('fWeek').addEventListener('input', function() {
   } else {
     document.getElementById('fWeekHint').textContent = '';
   }
-});
-
-document.getElementById('importWeek').addEventListener('input', function() {
-  const n = parseInt(this.value);
-  if (n >= 1 && n <= 52) document.getElementById('importDeadline').value = thursdayOfMenuWeek(n);
 });
 
 function closeModal() {
@@ -1146,99 +1085,6 @@ async function deleteProject(name) {
   }
 }
 
-// ── Mail import modal ──
-const NL_MONTHS = {jan:1,feb:2,mrt:3,apr:4,mei:5,jun:6,jul:7,aug:8,sep:9,okt:10,nov:11,dec:12,
-  januari:1,februari:2,maart:3,april:4,mei:5,juni:6,juli:7,augustus:8,september:9,oktober:10,november:11,december:12};
-
-function parseEmail(text) {
-  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
-  let taskName = '';
-  const subjectLine = lines.find(l => /^(onderwerp|subject)\s*:/i.test(l));
-  taskName = subjectLine ? subjectLine.replace(/^(onderwerp|subject)\s*:\s*/i,'').trim() : (lines[0] || '');
-
-  let week = null;
-  const wm = text.match(/week\s+(\d+)/i);
-  if (wm) week = parseInt(wm[1]);
-
-  let deadline = '';
-  const dmMatch = text.match(/(\d{1,2})\s+(januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december|jan|feb|mrt|apr|jun|jul|aug|sep|okt|nov|dec)/i);
-  if (dmMatch) {
-    const day = parseInt(dmMatch[1]);
-    const mon = NL_MONTHS[dmMatch[2].toLowerCase()];
-    if (mon) deadline = `${new Date().getFullYear()}-${String(mon).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-  } else {
-    const numMatch = text.match(/(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?/);
-    if (numMatch) {
-      const day = parseInt(numMatch[1]), mon = parseInt(numMatch[2]);
-      const yr  = numMatch[3] ? (parseInt(numMatch[3]) < 100 ? 2000+parseInt(numMatch[3]) : parseInt(numMatch[3])) : new Date().getFullYear();
-      deadline = `${yr}-${String(mon).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-    }
-  }
-  if (!deadline && week) deadline = thursdayOfMenuWeek(week);
-
-  let project = '';
-  const lower = text.toLowerCase();
-  if (lower.includes('flyer')) project = 'Weekmenuflyer';
-  else if (lower.includes('koelkast') || lower.includes('productinformatie') || lower.includes('bestell')) project = 'Koelkast';
-  else if (lower.includes('menu') || lower.includes('import') || lower.includes('menucheck')) project = 'Menuplanning';
-  else if (lower.includes('instagram') || lower.includes('social') || lower.includes('post') || lower.includes('video')) project = 'Social posts';
-
-  return { taskName, week, project, deadline };
-}
-
-document.getElementById('btnMailImport').onclick = () => {
-  document.getElementById('mailImportText').value = '';
-  document.getElementById('mailImportSuggestions').style.display = 'none';
-  document.getElementById('btnImportAdd').style.display = 'none';
-  document.getElementById('btnImportAnalyse').style.display = '';
-  document.getElementById('mailImportOverlay').classList.add('open');
-  setTimeout(() => document.getElementById('mailImportText').focus(), 50);
-};
-document.getElementById('btnImportCancel').onclick = () => document.getElementById('mailImportOverlay').classList.remove('open');
-document.getElementById('mailImportOverlay').addEventListener('click', e => {
-  if (e.target === document.getElementById('mailImportOverlay')) document.getElementById('mailImportOverlay').classList.remove('open');
-});
-
-document.getElementById('btnImportAnalyse').onclick = () => {
-  const text = document.getElementById('mailImportText').value.trim();
-  if (!text) { document.getElementById('mailImportText').focus(); return; }
-  const p = parseEmail(text);
-  document.getElementById('importTaak').value    = p.taskName;
-  document.getElementById('importProject').value = p.project;
-  document.getElementById('importWeek').value    = p.week || '';
-  document.getElementById('importDeadline').value= p.deadline;
-  document.getElementById('mailImportSuggestions').style.display = '';
-  document.getElementById('btnImportAdd').style.display = '';
-  document.getElementById('btnImportAnalyse').textContent = 'Opnieuw analyseren';
-  document.getElementById('importTaak').focus();
-};
-
-document.getElementById('btnImportAdd').onclick = async () => {
-  const taak = document.getElementById('importTaak').value.trim();
-  if (!taak) { document.getElementById('importTaak').focus(); return; }
-  const btn = document.getElementById('btnImportAdd');
-  btn.textContent = 'Toevoegen...'; btn.disabled = true;
-  try {
-    await fetch(`${API}/tasks`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        taak,
-        project:   document.getElementById('importProject').value   || null,
-        deadline:  document.getElementById('importDeadline').value  || null,
-        herhaling: document.getElementById('importHerhaling').value || null,
-      }),
-    });
-    document.getElementById('mailImportOverlay').classList.remove('open');
-    toast('Taak toegevoegd vanuit mail!');
-    await loadTasks();
-  } catch {
-    toast('Opslaan mislukt');
-  } finally {
-    btn.textContent = 'Toevoegen'; btn.disabled = false;
-  }
-};
-
 // ── Mail modal ──
 const CONTACTS = [
   { name: 'Aron',   email: 'aron@thuysvers.nl' },
@@ -1386,65 +1232,6 @@ function toast(msg) {
   el.textContent = msg;
   el.classList.add('show');
   setTimeout(() => el.classList.remove('show'), 2500);
-}
-
-// ── Gmail proposals ──
-async function loadProposals() {
-  const el = document.getElementById('mailProposals');
-  try {
-    const r = await fetch(`${API}/gmail/proposals`);
-    if (r.status === 401) { el.style.display = 'none'; return; }
-    const proposals = await r.json();
-    if (!proposals.length) { el.style.display = 'none'; return; }
-    el.style.display = '';
-    el.innerHTML = `<div class="proposals-section">
-      <div class="proposals-header">
-        <h3>Voorstellen uit mail</h3>
-        <span>${proposals.length} nieuw</span>
-      </div>
-      ${proposals.map(p => `
-        <div class="proposal-item" id="prop-${p.notionId}">
-          <div class="proposal-info">
-            <div class="proposal-subject">${esc(p.taskSuggestion)}</div>
-            <div class="proposal-from">${esc(p.from)} · ${esc(p.subject)}</div>
-            ${p.summary ? `<div class="proposal-summary">${esc(p.summary)}</div>` : ''}
-          </div>
-          <div class="proposal-actions">
-            <button class="btn-proposal-dismiss" data-notionid="${p.notionId}" data-gmailid="${p.gmailId}">Weigeren</button>
-            <button class="btn-proposal-add" data-task="${esc(p.taskSuggestion)}" data-notionid="${p.notionId}" data-gmailid="${p.gmailId}">Invoegen</button>
-          </div>
-        </div>`).join('')}
-    </div>`;
-
-    el.querySelectorAll('.btn-proposal-dismiss').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        document.getElementById(`prop-${btn.dataset.notionid}`)?.remove();
-        if (!el.querySelectorAll('.proposal-item').length) el.style.display = 'none';
-        await fetch(`${API}/gmail/dismiss/${btn.dataset.notionid}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ gmailId: btn.dataset.gmailid }),
-        });
-      });
-    });
-    el.querySelectorAll('.btn-proposal-add').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        const parsed = parseEmail(btn.dataset.task);
-        document.getElementById('fTaak').value = btn.dataset.task;
-        if (parsed.project) document.getElementById('fProject').value = parsed.project;
-        if (parsed.deadline) document.getElementById('fDeadline').value = parsed.deadline;
-        document.getElementById('overlay').classList.add('open');
-        setTimeout(() => document.getElementById('fTaak').focus(), 50);
-        fetch(`${API}/gmail/dismiss/${btn.dataset.notionid}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ gmailId: btn.dataset.gmailid }),
-        });
-        document.getElementById(`prop-${btn.dataset.notionid}`)?.remove();
-        if (!el.querySelectorAll('.proposal-item').length) el.style.display = 'none';
-      });
-    });
-  } catch { el.style.display = 'none'; }
 }
 
 // ── Geschiedenis ──
@@ -1615,10 +1402,8 @@ document.getElementById('btnProjEntrySave').onclick = async () => {
 // ── Init ──
 loadTasks();
 loadDoneTasks();
-loadProposals();
 loadProjectsList();
 setInterval(loadTasks, 5 * 60 * 1000);
-setInterval(loadProposals, 10 * 60 * 1000);
 </script>
 </body>
 </html>

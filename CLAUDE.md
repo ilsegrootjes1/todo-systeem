@@ -4,30 +4,27 @@
 Een persoonlijk taakbeheersysteem voor Ilse (ilse.grootjes@thuysvers.nl) gebouwd op:
 - **Frontend**: `index.html` — statische pagina gedeployd via Cloudflare Pages (GitHub → auto-deploy)
 - **Backend**: `api/index.js` — Cloudflare Worker op `https://todo-api.ilse-grootjes.workers.dev`
-- **Data**: Notion databases (taken + 3 projectdatabases)
+- **Data**: Notion databases (taken + gecombineerde Weekoverzicht-database)
 - **Repo**: https://github.com/ilsegrootjes1/todo-systeem
 
 ## Deployen
 - **Frontend**: `git push` → GitHub Actions deployt automatisch naar Cloudflare Pages
 - **Worker**: `cd api && CLOUDFLARE_API_TOKEN=<token-uit-wachtwoordmanager> npx wrangler deploy`
 
-## Cloudflare Worker cron
-Draait elke 30 minuten (ook zonder laptop): scant Gmail, slaat actie-voorstellen op in Notion.
-
 ## Notion databases
 | Database | ID |
 |---|---|
 | Taken (hoofd) | `47ae20e8-094b-475b-81fc-7efdf7f5d069` |
-| Weekmenuflyer (WMF) | `33d17522-60d6-8044-b429-debae08d8cab` |
-| Koelkast | `87de96d6-051b-4035-959b-63fe753b1319` |
-| Menuplanning | `8808d20d-d534-4413-9f46-1904a430bc1c` |
+| Weekoverzicht (gecombineerd) | `38217522-60d6-819b-ba0b-cbd50c11e372` |
+
+De 3 afzonderlijke projectdatabases (WMF, Koelkast, Menuplanning) zijn vervangen door één gecombineerde Weekoverzicht database met kolommen: Week (titel) | Menuplanning (select) | Weekmenuflyer (select) | Koelkast (select). Elke rij = één week.
 
 Notion token: staat als Worker-secret `NOTION_TOKEN` (zie Cloudflare dashboard)  
 Cloudflare account ID: `2025734d6fc7a5fa3c277c8913cf9931`
 
 ## Taken-database: belangrijke velden
 - **Taak** (title), **Deadline** (date), **Doelweek** (formula), **Klaar** (checkbox)
-- **Project** (select): Weekmenuflyer · Menuplanning · Koelkast · Social posts · Overig · Gmail
+- **Project** (select): Weekmenuflyer · Menuplanning · Koelkast · Social posts · Overig
 - **Herhaling** (select): Wekelijks · 2 wekelijks · 4 wekelijks
 - **Opmerking** (rich_text), **Status** (select), **Te laat** (formula)
 
@@ -90,11 +87,9 @@ Als een taak wordt afgevinkt, updaten deze regels de projectdatabases.
 | Menucheck in verborgen collectie | Collectie gecheckt |
 | Live menucheck | Live gegaan |
 
-## Gmail-voorstellen
-- Worker haalt elke 30 min nieuwe mails op en slaat actie-voorstellen op als Notion-taken (Project=Gmail)
-- Frontend toont ze apart; "Invoegen" vult automatisch project/deadline in
-- "Weigeren" archiveert de Notion-pagina en markeert mail als gelezen
-- Alleen mails met expliciete actieverzoeken worden voorgesteld (geen orderbevestigingen, noreply, losse ?)
+### Statusvolgorde en synchronisatie (twee richtingen)
+- Elke kolom heeft een vaste statusvolgorde (`STATUS_ORDER` in `api/index.js`). Een taak afvinken zet de status alleen **vooruit**, nooit terug — als de status handmatig al verder staat dan wat de taak zou zetten, gebeurt er niets.
+- Omgekeerd: een status handmatig aanpassen in het Overzicht vinkt automatisch alle nog openstaande taken af die bij die status of een eerdere status in de volgorde horen (voor die week/project). Zo lopen taken en Overzicht-status niet meer uit elkaar.
 
 ## Overzicht-tab — gewenste layout
 
@@ -136,7 +131,7 @@ Kolommen: **Week | Live | Menuplanning status | Menuplanning deadline | Flyer st
 | Wachtend op GO Pieter | Live − 4 weken |
 | Bezig | Live − 4 weken |
 | Klaar voor proofread | Live − 3 weken |
-| Besteld | Live − 16 dagen |
+| Besteld | Live − 14 dagen |
 | Geleverd | Live − 1 week |
 
 ### Live-datum berekening
@@ -151,6 +146,3 @@ Live (vrijdag) van ISO-week N:
 - **Retentie ads**: "ik heb de retentie ads voor week X in het mapje gezet" + link inline
 - **Weekmenuflyer**: vraagt proofread aan Pieter
 - **Koelkast**: stuurt productinformatie
-
-## WMF-database titelproperty
-Heet "Doc name" (niet "Week" zoals bij de andere twee).

@@ -22,7 +22,6 @@ export const STAPPEN = [
   { key: 'retentie',       naam: 'Retentie-ads naar Marcus',         fase: 'voorbereiding', dl: -28, bron: 'Builder' },
   // ── Uitvoer: in de week vóór de levering ──
   { key: 'flyer_binnen',        naam: 'Flyers binnen (depot of opgehaald)', fase: 'uitvoer', dl: -2, bron: 'Drukwerk' },
-  { key: 'import',              naam: 'Import gedraaid',                    fase: 'uitvoer', dl: -1, bron: null },
   { key: 'menucheck',           naam: 'Menucheck in verborgen collectie',   fase: 'uitvoer', dl: -1, bron: null },
   { key: 'koelkast_bestelling', naam: 'Koelkastbestelling geplaatst',       fase: 'uitvoer', dl: -1, bron: null },
   { key: 'proef_bestelling',    naam: 'Proefbestelling geplaatst',          fase: 'uitvoer', dl: -1, bron: null },
@@ -97,8 +96,8 @@ async function log(db, { week, stap, actie, bron = null, door = null, detail = n
 // Elke bron geeft { ok, fout?, uitkomst: { [week]: { [stap]: { klaar, at?, door?, info?, link? } } } }.
 // klaar === null betekent "weet ik niet" (dan blijft de stap zoals hij is).
 
-async function haalJson(url, init) {
-  const res = await fetch(url, init);
+async function haalJson(url, init, binding) {
+  const res = binding ? await binding.fetch(url, init) : await fetch(url, init);
   if (!res.ok) throw new Error(`${res.status} ${url.split('?')[0]}`);
   return res.json();
 }
@@ -132,7 +131,7 @@ async function bronPim(env, weken) {
 async function bronBuilder(env, weken) {
   const tools = ['flyer', 'post', 'retentie', 'retentie-mail'];
   const lijsten = await Promise.all(tools.map(t =>
-    haalJson(`${BUILDER_URL}/api/logboek?tool=${t}`).then(d => d.regels || []).catch(() => null)
+    haalJson(`${BUILDER_URL}/api/logboek?tool=${t}`, undefined, env.BUILDER).then(d => d.regels || []).catch(() => null)
   ));
   if (lijsten.slice(0, 3).every(l => l === null)) throw new Error('Builder-logboek niet bereikbaar');
   const eerste = (tool, week) => {
@@ -154,7 +153,7 @@ async function bronBuilder(env, weken) {
 }
 
 async function bronDrukwerk(env, weken) {
-  const { docs = [] } = await haalJson(`${DRUKWERK_URL}/api/c/orders`);
+  const { docs = [] } = await haalJson(`${DRUKWERK_URL}/api/c/orders`, undefined, env.DRUKWERK);
   const flyers = docs.filter(o => o.type === 'Weekmenuflyer' && !o.retour);
   const uitkomst = {};
   for (const week of weken) {

@@ -11,4 +11,13 @@ crons = ["*/15 * * * *"]
 [[d1_databases]]
 binding = "DB"
 database_name = "todo-weekbord"
-database_id = "LOKAAL"
+database_id = "92f5b7d6-f294-400f-a214-be60ab9ea89d"
+
+# Direct koppelen aan de andere Workers (fetch naar eigen workers.dev-adressen geeft 404)
+[[services]]
+binding = "BUILDER"
+service = "thuysvers-flyer-builder"
+
+[[services]]
+binding = "DRUKWERK"
+service = "thuysvers-drukwerk"

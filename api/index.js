@@ -1,3 +1,5 @@
+import { sync, bord, zetHandmatig, logboek } from './weken.js';
+
 const TASKS_DB    = '47ae20e8-094b-475b-81fc-7efdf7f5d069';
 const OVERZICHT_DB = '38217522-60d6-819b-ba0b-cbd50c11e372';
 
@@ -246,6 +248,21 @@ export default {
     if (method === 'OPTIONS') return new Response(null, { headers: cors });
 
     try {
+      // ── Weekbord ──
+      if (pathname === '/weken' && method === 'GET') {
+        if (url.searchParams.get('sync') === '1') await sync(env);
+        return json(await bord(env));
+      }
+      if (pathname === '/weken/log' && method === 'GET') {
+        return json(await logboek(env, url.searchParams.get('week')));
+      }
+      const stapMatch = pathname.match(/^\/weken\/(\d{4}-W\d{2})\/([a-z_]+)$/);
+      if (stapMatch && method === 'POST') {
+        const body = await request.json();
+        await zetHandmatig(env, stapMatch[1], stapMatch[2], { klaar: !!body.klaar, door: body.door });
+        return json(await bord(env));
+      }
+
       // GET /tasks
       if (pathname === '/tasks' && method === 'GET') {
         const data = await notion(env, `/databases/${TASKS_DB}/query`, 'POST', {
@@ -457,5 +474,9 @@ export default {
     } catch (e) {
       return json({ error: e.message }, 500);
     }
+  },
+
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(sync(env));
   },
 };

@@ -94,6 +94,44 @@ tr:last-child td { border-bottom: none; }
 .status-option { padding: 8px 12px; border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: 500; }
 .status-option:hover { background: #f5f5f3; }
 
+
+/* ── Weken (weekbord) ── */
+.weken { max-width: 700px; margin: 0 auto; padding: 16px 16px 60px; }
+.wk-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+.wk-sync { font-size: 11px; color: #b0b0b0; }
+.wk-btn { background: white; border: 1.5px solid #e5e7eb; border-radius: 8px; padding: 6px 12px; font-size: 12px; font-weight: 600; color: #6b7280; cursor: pointer; }
+.wk-btn:hover { border-color: #1a1a1a; color: #1a1a1a; }
+.wk-melding { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; border-radius: 8px; padding: 8px 11px; font-size: 12px; margin-bottom: 8px; line-height: 1.4; }
+.wk-melding.fout { background: #fef2f2; border-color: #fecaca; color: #b91c1c; }
+.wk-card { background: white; border: 1px solid #f0f0ee; border-radius: 12px; margin-bottom: 8px; overflow: hidden; }
+.wk-card.rood { border-color: #fecaca; }
+.wk-head { display: flex; align-items: center; gap: 10px; padding: 12px 14px; cursor: pointer; user-select: none; }
+.wk-titel { font-size: 14px; font-weight: 700; }
+.wk-sub { font-size: 11px; color: #9ca3af; margin-top: 1px; }
+.wk-tags { margin-left: auto; display: flex; gap: 5px; align-items: center; flex-shrink: 0; }
+.wk-tag { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.02em; }
+.wk-tag.go { background: #ede9fe; color: #6d28d9; }
+.wk-tag.nu { background: #e0f2fe; color: #0369a1; }
+.wk-tag.laat { background: #fee2e2; color: #b91c1c; }
+.wk-tag.bijna { background: #ffedd5; color: #c2410c; }
+.wk-tag.ok { background: #dcfce7; color: #15803d; }
+.wk-teller { font-size: 12px; color: #9ca3af; font-weight: 600; min-width: 34px; text-align: right; }
+.wk-body { padding: 0 14px 10px; display: none; }
+.wk-card.open .wk-body { display: block; }
+.wk-fase { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #c8c8c8; margin: 8px 0 4px; }
+.wk-stap { display: flex; gap: 10px; padding: 7px 0; border-top: 1px solid #f5f5f3; align-items: flex-start; }
+.wk-stap:first-of-type { border-top: none; }
+.wk-stap .check { margin-top: 0; }
+.wk-stap.nvt { opacity: 0.4; }
+.wk-naam { font-size: 13px; font-weight: 500; line-height: 1.35; }
+.wk-meta { font-size: 11px; color: #9ca3af; margin-top: 2px; line-height: 1.4; }
+.wk-meta .auto { color: #15803d; font-weight: 600; }
+.wk-meta .hand { color: #6b7280; font-weight: 600; }
+.wk-meta .laat { color: #ef4444; font-weight: 700; }
+.wk-meta .bijna { color: #f97316; font-weight: 700; }
+.wk-bron { font-size: 10px; color: #c4c4c4; margin-left: auto; white-space: nowrap; padding-top: 2px; }
+@media (max-width: 480px) { .wk-bron { display: none; } .wk-tags { flex-wrap: wrap; justify-content: flex-end; } }
+
 /* ── Modal ── */
 .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 200; display: none; align-items: flex-end; justify-content: center; }
 .overlay.open { display: flex; }
@@ -190,6 +228,7 @@ tr:last-child td { border-bottom: none; }
   </div>
   <div class="main-nav">
     <button class="nav-tab active" data-view="taken">Taken</button>
+    <button class="nav-tab" data-view="weken">Weken</button>
     <button class="nav-tab" data-view="overzicht">Overzicht</button>
     <button class="nav-tab" data-view="geschiedenis">Geschiedenis</button>
   </div>
@@ -198,6 +237,10 @@ tr:last-child td { border-bottom: none; }
 
 <div id="viewTaken">
   <div class="main" id="takenMain"><div class="empty">Laden...</div></div>
+</div>
+
+<div id="viewWeken" style="display:none">
+  <div class="weken" id="wekenMain"><div class="empty">Laden...</div></div>
 </div>
 
 <div id="viewGeschiedenis" style="display:none">
@@ -504,10 +547,12 @@ document.querySelectorAll('.nav-tab').forEach(btn => {
     currentView = btn.dataset.view;
     document.getElementById('viewTaken').style.display       = currentView === 'taken'      ? '' : 'none';
     document.getElementById('viewOverzicht').style.display   = currentView === 'overzicht'  ? '' : 'none';
+    document.getElementById('viewWeken').style.display       = currentView === 'weken'      ? '' : 'none';
     document.getElementById('viewGeschiedenis').style.display= currentView === 'geschiedenis'? '' : 'none';
     document.getElementById('projFilters').style.display     = currentView === 'taken'      ? 'flex' : 'none';
     document.getElementById('btnAdd').style.display          = currentView === 'taken'      ? '' : 'none';
     if (currentView === 'overzicht') loadProjects();
+    if (currentView === 'weken') loadWeken();
     if (currentView === 'geschiedenis') loadRecent();
   });
 });
@@ -1398,6 +1443,122 @@ document.getElementById('btnProjEntrySave').onclick = async () => {
     btn.textContent = 'Opslaan'; btn.disabled = false;
   }
 };
+
+
+// ── Weken (weekbord) ──
+let weekbord = null;
+const wekenOpen = new Set();
+const WK_DAG = ['zo','ma','di','wo','do','vr','za'];
+
+function wkDatum(iso, metTijd) {
+  if (!iso) return '';
+  const d = new Date(iso.length === 10 ? iso + 'T12:00:00' : iso);
+  let t = `${WK_DAG[d.getDay()]} ${d.getDate()} ${MS[d.getMonth()]}`;
+  if (metTijd && iso.length > 10) t += ` ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+  return t;
+}
+
+async function loadWeken(sync) {
+  const el = document.getElementById('wekenMain');
+  if (!weekbord) el.innerHTML = '<div class="empty">Laden...</div>';
+  try {
+    const res = await fetch(`${API}/weken${sync ? '?sync=1' : ''}`);
+    weekbord = await res.json();
+    if (weekbord.error) throw new Error(weekbord.error);
+    renderWeken();
+  } catch (e) {
+    el.innerHTML = `<div class="empty">Weekbord laden mislukt: ${esc(e.message)}</div>`;
+  }
+}
+
+function renderWeken() {
+  const b = weekbord;
+  const el = document.getElementById('wekenMain');
+  const goWeek = b.weken[6]?.week; // huidige menuweek + 5 = de week waarvoor deze vrijdag GO komt
+  const sync = b.laatsteSync;
+  let html = `<div class="wk-top"><div class="wk-sync">${sync ? 'Laatst gecheckt ' + wkDatum(sync.at, true) : 'Nog niet gecheckt'}</div>
+    <button class="wk-btn" id="wkSync">Nu checken</button></div>`;
+
+  Object.entries(sync?.status || {}).forEach(([bron, st]) => {
+    if (!st.ok) html += `<div class="wk-melding fout"><b>${esc(bron)}:</b> ${esc(st.fout || 'niet bereikbaar')}</div>`;
+    if (st.waarschuwing) html += `<div class="wk-melding"><b>${esc(bron)}:</b> ${esc(st.waarschuwing)}</div>`;
+  });
+
+  b.weken.forEach(w => {
+    const tellend = w.stappen.filter(s => s.status !== 'nvt');
+    const klaar = tellend.filter(s => s.status === 'klaar').length;
+    const laat = tellend.filter(s => s.status === 'te-laat').length;
+    const bijna = tellend.filter(s => s.status === 'bijna').length;
+    const nr = parseInt(w.week.split('-W')[1]);
+    const isNu = w.week === b.huidigeMenuweek;
+    if (!wekenOpen.has(w.week) && !wekenOpen.has('_init_' + w.week)) {
+      wekenOpen.add('_init_' + w.week);
+      if (laat || bijna || w.week === goWeek) wekenOpen.add(w.week);
+    }
+    const tags = [
+      isNu ? '<span class="wk-tag nu">loopt nu</span>' : '',
+      w.week === goWeek ? '<span class="wk-tag go">GO-week</span>' : '',
+      laat ? `<span class="wk-tag laat">${laat} te laat</span>` : '',
+      bijna ? `<span class="wk-tag bijna">${bijna} bijna</span>` : '',
+      !laat && !bijna && klaar === tellend.length ? '<span class="wk-tag ok">alles klaar</span>' : '',
+    ].join('');
+
+    const fase = (key, label) => {
+      const st = w.stappen.filter(s => s.fase === key);
+      return `<div class="wk-fase">${label}</div>` + st.map(s => {
+        let meta;
+        if (s.status === 'klaar') {
+          const wie = s.door ? ` · ${esc(s.door)}` : '';
+          meta = s.bron === 'handmatig'
+            ? `<span class="hand">✓ handmatig</span>${wie} · ${wkDatum(s.klaarAt, true)}`
+            : `<span class="auto">✓ automatisch (${esc(s.bron)})</span>${wie} · ${wkDatum(s.klaarAt, true)}`;
+        } else if (s.status === 'nvt') {
+          meta = 'van vóór het weekbord';
+        } else {
+          const cls = s.status === 'te-laat' ? 'laat' : s.status === 'bijna' ? 'bijna' : '';
+          meta = `<span class="${cls}">deadline ${wkDatum(s.deadline)}</span>`;
+        }
+        if (s.info) meta += ` · ${esc(s.info)}`;
+        return `<div class="wk-stap ${s.status}">
+          <div class="check${s.status === 'klaar' ? ' done' : ''}" data-week="${w.week}" data-stap="${s.key}" data-klaar="${s.status === 'klaar' ? 1 : 0}" data-auto="${s.bron && s.bron !== 'handmatig' ? 1 : 0}">${s.status === 'klaar' ? '✓' : ''}</div>
+          <div style="flex:1;min-width:0"><div class="wk-naam">${esc(s.naam)}</div><div class="wk-meta">${meta}</div></div>
+          <div class="wk-bron">${s.automatisch ? 'auto: ' + esc(s.automatisch) : 'handmatig'}</div>
+        </div>`;
+      }).join('');
+    };
+
+    html += `<div class="wk-card${wekenOpen.has(w.week) ? ' open' : ''}${laat ? ' rood' : ''}" data-week="${w.week}">
+      <div class="wk-head"><div><div class="wk-titel">Week ${nr}</div><div class="wk-sub">live ${wkDatum(w.live)}</div></div>
+        <div class="wk-tags">${tags}<span class="wk-teller">${klaar}/${tellend.length}</span></div></div>
+      <div class="wk-body">${fase('voorbereiding', 'Voorbereiding · week na de GO')}${fase('uitvoer', 'Uitvoer · week vóór de levering')}</div>
+    </div>`;
+  });
+
+  el.innerHTML = html;
+  document.getElementById('wkSync').onclick = async (e) => {
+    e.target.textContent = 'Bezig...'; e.target.disabled = true;
+    await loadWeken(true);
+    toast('Bijgewerkt');
+  };
+  el.querySelectorAll('.wk-head').forEach(h => h.onclick = () => {
+    const wk = h.parentElement.dataset.week;
+    wekenOpen.has(wk) ? wekenOpen.delete(wk) : wekenOpen.add(wk);
+    h.parentElement.classList.toggle('open');
+  });
+  el.querySelectorAll('.wk-stap .check').forEach(c => c.onclick = async () => {
+    const klaar = c.dataset.klaar !== '1';
+    if (!klaar && c.dataset.auto === '1' && !confirm('Deze stap is automatisch afgevinkt. Toch weer openzetten?')) return;
+    try {
+      const res = await fetch(`${API}/weken/${c.dataset.week}/${c.dataset.stap}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ klaar, door: 'Ilse' }),
+      });
+      weekbord = await res.json();
+      if (weekbord.error) throw new Error(weekbord.error);
+      renderWeken();
+    } catch { toast('Opslaan mislukt'); }
+  });
+}
 
 // ── Init ──
 loadTasks();

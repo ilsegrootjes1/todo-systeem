@@ -181,6 +181,7 @@ export async function sync(env, nu = new Date()) {
   const bronnen = { PIM: bronPim, Builder: bronBuilder, Drukwerk: bronDrukwerk };
   const status = {};
   const nuIso = nu.toISOString();
+  const nieuwKlaar = []; // [week, stap] die in deze ronde klaar zijn geworden (voor de Notion-sync)
 
   const bestaand = {};
   const { results } = await db.prepare(`SELECT * FROM stap WHERE week IN (${weken.map(() => '?').join(',')})`).bind(...weken).all();
@@ -203,6 +204,7 @@ export async function sync(env, nu = new Date()) {
         if (u.klaar === true && !wasKlaar) {
           klaarAt = u.at || nuIso; bron = naam; door = u.door || null;
           await log(db, { week, stap, actie: 'automatisch afgevinkt', bron: naam, door, detail: u.info || null });
+          nieuwKlaar.push([week, stap]);
         } else if (u.klaar === false && wasKlaar && !handmatig) {
           // De bron zegt expliciet dat het niet (meer) klopt, bv. GO ingetrokken of nieuw open punt.
           klaarAt = null; bron = null; door = null;
@@ -221,7 +223,15 @@ export async function sync(env, nu = new Date()) {
 
   await db.prepare('INSERT INTO meta (k, v) VALUES (?, ?) ON CONFLICT (k) DO UPDATE SET v = excluded.v')
     .bind('laatste_sync', JSON.stringify({ at: nuIso, status })).run();
-  return { at: nuIso, status };
+  return { at: nuIso, status, nieuwKlaar };
+}
+
+// Alle afgevinkte stappen op het bord (voor een eenmalige Notion-sync).
+export async function alleKlaar(env, nu = new Date()) {
+  await zorgVoorSchema(env.DB);
+  const weken = bordWeken(nu);
+  const { results } = await env.DB.prepare(`SELECT week, stap FROM stap WHERE klaar_at IS NOT NULL AND week IN (${weken.map(() => '?').join(',')})`).bind(...weken).all();
+  return results.map(r => [r.week, r.stap]);
 }
 
 // ── Bord opbouwen voor de frontend ──

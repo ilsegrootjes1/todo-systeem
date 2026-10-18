@@ -1,4 +1,4 @@
-import { sync, bord, zetHandmatig, logboek } from './weken.js';
+import { sync, bord, zetHandmatig, logboek, alleKlaar } from './weken.js';
 
 const TASKS_DB    = '47ae20e8-094b-475b-81fc-7efdf7f5d069';
 const OVERZICHT_DB = '38217522-60d6-819b-ba0b-cbd50c11e372';
@@ -185,6 +185,47 @@ async function maybeUpdateProjectStatus(env, taskName, doelweek, deadline) {
   }
 }
 
+// Weekbord → Notion Weekoverzicht: een afgevinkte stap zet de status in Notion vooruit (nooit terug),
+// zodat iedereen die in Notion kijkt hetzelfde ziet als op het weekbord.
+const STAP_NAAR_OVERZICHT = {
+  menu:                [{ col: 'Menuplanning', status: 'Menu gemaakt' }, { col: 'Koelkast', status: 'Wachtend op GO Pieter' }, { col: 'Weekmenuflyer', status: 'Wachtend op GO Pieter' }],
+  go:                  [{ col: 'Menuplanning', status: 'Pieter GO' }, { col: 'Koelkast', status: 'Bezig' }, { col: 'Weekmenuflyer', status: 'Bezig' }],
+  koelkast_info:       [{ col: 'Koelkast', status: 'Product informatie verwerkt' }],
+  koelkast_bestelling: [{ col: 'Koelkast', status: 'Bestelling geplaatst' }],
+  flyer_gemaakt:       [{ col: 'Weekmenuflyer', status: 'Klaar voor proofread' }],
+  flyer_besteld:       [{ col: 'Weekmenuflyer', status: 'Besteld' }],
+  flyer_binnen:        [{ col: 'Weekmenuflyer', status: 'Geleverd' }],
+  menucheck:           [{ col: 'Menuplanning', status: 'Collectie gecheckt' }],
+  live_check:          [{ col: 'Menuplanning', status: 'Live gegaan' }],
+};
+
+async function weekbordNaarNotion(env, klaar) {
+  const perWeek = {};
+  for (const [week, stap] of klaar || []) {
+    for (const u of STAP_NAAR_OVERZICHT[stap] || []) (perWeek[week] ||= []).push(u);
+  }
+  if (!Object.keys(perWeek).length) return 0;
+  const rows = await queryAllOvz(env);
+  let aangepast = 0;
+  for (const [week, updates] of Object.entries(perWeek)) {
+    const nr = parseInt(week.split('-W')[1]);
+    const entry = rows.find(p => {
+      const tp = Object.values(p.properties).find(x => x.type === 'title');
+      return weekNumFromTitle(tp?.title?.[0]?.plain_text) === nr;
+    });
+    const properties = {};
+    for (const { col, status } of updates) {
+      const huidig = properties[col]?.select?.name || entry?.properties?.[col]?.select?.name || null;
+      if (statusRank(col, status) > (huidig ? statusRank(col, huidig) : -1)) properties[col] = { select: { name: status } };
+    }
+    if (!Object.keys(properties).length) continue;
+    if (entry) await notion(env, `/pages/${entry.id}`, 'PATCH', { properties });
+    else await notion(env, '/pages', 'POST', { parent: { database_id: OVERZICHT_DB }, properties: { Week: { title: [{ text: { content: `Week ${nr}` } }] }, ...properties } });
+    aangepast++;
+  }
+  return aangepast;
+}
+
 const cors = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS',
@@ -250,8 +291,14 @@ export default {
     try {
       // ── Weekbord ──
       if (pathname === '/weken' && method === 'GET') {
-        if (url.searchParams.get('sync') === '1') await sync(env);
+        if (url.searchParams.get('sync') === '1') {
+          const r = await sync(env);
+          await weekbordNaarNotion(env, r.nieuwKlaar).catch(() => {});
+        }
         return json(await bord(env));
+      }
+      if (pathname === '/weken/notion-sync' && method === 'POST') {
+        return json({ aangepast: await weekbordNaarNotion(env, await alleKlaar(env)) });
       }
       if (pathname === '/weken/log' && method === 'GET') {
         return json(await logboek(env, url.searchParams.get('week')));
@@ -260,6 +307,7 @@ export default {
       if (stapMatch && method === 'POST') {
         const body = await request.json();
         await zetHandmatig(env, stapMatch[1], stapMatch[2], { klaar: !!body.klaar, door: body.door });
+        if (body.klaar) await weekbordNaarNotion(env, [[stapMatch[1], stapMatch[2]]]).catch(() => {});
         return json(await bord(env));
       }
 
@@ -477,6 +525,6 @@ export default {
   },
 
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(sync(env));
+    ctx.waitUntil(sync(env).then(r => weekbordNaarNotion(env, r.nieuwKlaar)));
   },
 };

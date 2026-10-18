@@ -13,7 +13,6 @@ export const STAPPEN = [
   { key: 'go',             naam: 'Pieter GO',                        fase: 'voorbereiding', dl: -35, bron: 'PIM' },
   { key: 'pim_compleet',   naam: 'PIM compleet (mijn open punten)',  fase: 'voorbereiding', dl: -28, bron: 'PIM' },
   { key: 'koelkast_info',  naam: 'Koelkast-productinfo verstuurd',   fase: 'voorbereiding', dl: -28, bron: 'PIM' },
-  { key: 'collecties',     naam: 'Menu klaargezet in Shopify',       fase: 'voorbereiding', dl: -28, bron: 'PIM' },
   { key: 'flyer_gemaakt',  naam: 'Weekmenuflyer gemaakt',            fase: 'voorbereiding', dl: -28, bron: 'Builder' },
   { key: 'flyer_akkoord',  naam: 'Flyer goedgekeurd door Aron',      fase: 'voorbereiding', dl: -28, bron: null },
   { key: 'flyer_besteld',  naam: 'Weekmenuflyer besteld',            fase: 'voorbereiding', dl: -28, bron: 'Drukwerk' },
@@ -122,7 +121,6 @@ async function bronPim(env, weken) {
       koelkast_info: kk.length
         ? { klaar: true, at: kk[0].at, door: kk[0].door, info: kk.map(k => k.bedrijfNaam || `bedrijf ${k.bedrijfId}`).join(', ') }
         : { klaar: false },
-      collecties: { klaar: !!w.collecties?.at, at: w.collecties?.at },
     };
   }
   return { ok: true, uitkomst };

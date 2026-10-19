@@ -198,13 +198,12 @@ export async function sync(env, nu = new Date()) {
         if (!STAP[stap]) continue;
         const rij = bestaand[`${week}|${stap}`];
         const wasKlaar = !!rij?.klaar_at;
-        const handmatig = rij?.bron === 'handmatig';
         let klaarAt = rij?.klaar_at || null, bron = rij?.bron || null, door = rij?.door || null;
 
         if (u.klaar === true && !wasKlaar) {
           klaarAt = u.at || nuIso; bron = naam; door = u.door || null;
           await log(db, { week, stap, actie: 'automatisch afgevinkt', bron: naam, door, detail: u.info || null });
-        } else if (u.klaar === false && wasKlaar && !handmatig) {
+        } else if (u.klaar === false && wasKlaar && rij?.bron === naam) {
           // De bron zegt expliciet dat het niet (meer) klopt, bv. GO ingetrokken of nieuw open punt.
           klaarAt = null; bron = null; door = null;
           await log(db, { week, stap, actie: 'heropend door bron', bron: naam, detail: u.info || null });
@@ -246,8 +245,10 @@ export async function bord(env, nu = new Date()) {
         const r = rijen[`${week}|${s.key}`] || {};
         const deadline = ymd(plusDagen(live, s.dl));
         const dagenOver = Math.round((new Date(deadline) - new Date(vandaag)) / 864e5);
+        const bronStuk = s.bron && meta && JSON.parse(meta.v).status?.[s.bron]?.ok === false;
         const status = r.klaar_at ? 'klaar'
           : week < BORD_START[s.fase] ? 'nvt'
+          : bronStuk ? 'onbekend'
           : dagenOver < 0 ? 'te-laat' : dagenOver <= 2 ? 'bijna' : 'open';
         return {
           key: s.key, naam: s.naam, fase: s.fase, automatisch: s.bron, deadline, status,

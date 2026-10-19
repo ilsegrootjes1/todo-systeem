@@ -194,6 +194,7 @@ const NOTION_STATUS = {
   bijna:     { name: 'Bijna',   color: 'orange' },
   'te-laat': { name: 'Te laat', color: 'red' },
   nvt:       { name: 'n.v.t.',  color: 'gray' },
+  onbekend:  { name: 'Wacht op koppeling', color: 'yellow' },
 };
 const DAG = ['zo', 'ma', 'di', 'wo', 'do', 'vr', 'za'];
 const MAAND = ['jan', 'feb', 'mrt', 'apr', 'mei', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'];
@@ -221,7 +222,7 @@ async function weekbordNaarNotion(env, { forceer = false } = {}) {
       Live: { date: { start: w.live } },
       Voortgang: tekst(`${tellend.length - open.length}/${tellend.length}`),
       'Te laat': { number: open.filter(s => s.status === 'te-laat').length },
-      'Nog open': tekst(open.map(s => `${s.status === 'te-laat' ? '⚠ ' : ''}${s.naam} (${kortDatum(s.deadline)})`).join(', ')),
+      'Nog open': tekst(open.map(s => `${s.status === 'te-laat' ? '⚠ ' : ''}${s.naam} (${s.status === 'onbekend' ? 'wacht op ' + s.automatisch : kortDatum(s.deadline)})`).join(', ')),
     };
     for (const s of w.stappen) properties[s.naam] = { select: { name: NOTION_STATUS[s.status].name } };
 

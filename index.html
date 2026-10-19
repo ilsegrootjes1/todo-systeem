@@ -1069,6 +1069,8 @@ function renderWeken() {
             : `<span class="auto">✓ automatisch (${esc(s.bron)})</span>${wie} · ${wkDatum(s.klaarAt, true)}`;
         } else if (s.status === 'nvt') {
           meta = 'van vóór het weekbord';
+        } else if (s.status === 'onbekend') {
+          meta = `wacht op koppeling met ${esc(s.automatisch)} · deadline ${wkDatum(s.deadline)}`;
         } else {
           const cls = s.status === 'te-laat' ? 'laat' : s.status === 'bijna' ? 'bijna' : '';
           meta = `<span class="${cls}">deadline ${wkDatum(s.deadline)}</span>`;

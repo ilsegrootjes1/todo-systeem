@@ -11,7 +11,7 @@ export const STAPPEN = [
   // ── Voorbereiding: GO-vrijdag (Live − 35) + één week ──
   { key: 'menu',           naam: 'Nieuw menu gemaakt',               fase: 'voorbereiding', dl: -35, bron: 'PIM' },
   { key: 'go',             naam: 'Pieter GO',                        fase: 'voorbereiding', dl: -35, bron: 'PIM' },
-  { key: 'pim_compleet',   naam: 'PIM compleet (mijn open punten)',  fase: 'voorbereiding', dl: -28, bron: 'PIM' },
+  { key: 'pim_compleet',   naam: 'PIM compleet (open punten Ilse)',  fase: 'voorbereiding', dl: -28, bron: 'PIM' },
   { key: 'koelkast_info',  naam: 'Koelkast-productinfo verstuurd',   fase: 'voorbereiding', dl: -28, bron: 'PIM' },
   { key: 'flyer_gemaakt',  naam: 'Weekmenuflyer gemaakt',            fase: 'voorbereiding', dl: -28, bron: 'Builder' },
   { key: 'flyer_akkoord',  naam: 'Flyer goedgekeurd door Aron',      fase: 'voorbereiding', dl: -28, bron: null },
@@ -98,6 +98,7 @@ async function log(db, { week, stap, actie, bron = null, door = null, detail = n
 async function haalJson(url, init, binding) {
   const res = binding ? await binding.fetch(url, init) : await fetch(url, init);
   if (!res.ok) throw new Error(`${res.status} ${url.split('?')[0]}`);
+  if (!(res.headers.get('content-type') || '').includes('json')) throw new Error(`geen geldig antwoord van ${url.split('?')[0]} (route nog niet live?)`);
   return res.json();
 }
 
@@ -181,7 +182,6 @@ export async function sync(env, nu = new Date()) {
   const bronnen = { PIM: bronPim, Builder: bronBuilder, Drukwerk: bronDrukwerk };
   const status = {};
   const nuIso = nu.toISOString();
-  const nieuwKlaar = []; // [week, stap] die in deze ronde klaar zijn geworden (voor de Notion-sync)
 
   const bestaand = {};
   const { results } = await db.prepare(`SELECT * FROM stap WHERE week IN (${weken.map(() => '?').join(',')})`).bind(...weken).all();
@@ -204,7 +204,6 @@ export async function sync(env, nu = new Date()) {
         if (u.klaar === true && !wasKlaar) {
           klaarAt = u.at || nuIso; bron = naam; door = u.door || null;
           await log(db, { week, stap, actie: 'automatisch afgevinkt', bron: naam, door, detail: u.info || null });
-          nieuwKlaar.push([week, stap]);
         } else if (u.klaar === false && wasKlaar && !handmatig) {
           // De bron zegt expliciet dat het niet (meer) klopt, bv. GO ingetrokken of nieuw open punt.
           klaarAt = null; bron = null; door = null;
@@ -223,16 +222,9 @@ export async function sync(env, nu = new Date()) {
 
   await db.prepare('INSERT INTO meta (k, v) VALUES (?, ?) ON CONFLICT (k) DO UPDATE SET v = excluded.v')
     .bind('laatste_sync', JSON.stringify({ at: nuIso, status })).run();
-  return { at: nuIso, status, nieuwKlaar };
+  return { at: nuIso, status };
 }
 
-// Alle afgevinkte stappen op het bord (voor een eenmalige Notion-sync).
-export async function alleKlaar(env, nu = new Date()) {
-  await zorgVoorSchema(env.DB);
-  const weken = bordWeken(nu);
-  const { results } = await env.DB.prepare(`SELECT week, stap FROM stap WHERE klaar_at IS NOT NULL AND week IN (${weken.map(() => '?').join(',')})`).bind(...weken).all();
-  return results.map(r => [r.week, r.stap]);
-}
 
 // ── Bord opbouwen voor de frontend ──
 export async function bord(env, nu = new Date()) {

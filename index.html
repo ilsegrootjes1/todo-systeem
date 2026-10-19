@@ -66,35 +66,6 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 /* ── Recurring badge ── */
 .recur-badge { display:inline-flex; align-items:center; gap:3px; font-size:10px; font-weight:600; color:#6d28d9; background:#f5f3ff; border-radius:4px; padding:2px 6px; margin-left:4px; }
 
-/* ── Overzicht ── */
-.overzicht { padding: 16px; max-width: 800px; margin: 0 auto; }
-.ov-scroll { overflow-x: auto; }
-table { width: 100%; border-collapse: collapse; background: white; border-radius: 12px; overflow: hidden; border: 1px solid #f0f0ee; }
-th { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; padding: 12px 14px; text-align: left; border-bottom: 1px solid #f0f0ee; background: #fafafa; }
-td { padding: 10px 14px; border-bottom: 1px solid #f8f8f8; vertical-align: middle; font-size: 13px; }
-tr:last-child td { border-bottom: none; }
-.week-cell { font-weight: 600; font-size: 13px; color: #555; white-space: nowrap; }
-.week-cell.current { color: #1a1a1a; }
-.current-week-row td { border-bottom: 2.5px solid #ef4444; }
-
-.status-badge { display: inline-block; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; white-space: nowrap; cursor: pointer; }
-.status-badge.empty { background: #f3f4f6; color: #c4c4c4; font-style: italic; cursor: pointer; }
-.status-badge.empty:hover { background: #e5e7eb; }
-
-.s-green  { background: #dcfce7; color: #15803d; }
-.s-blue   { background: #dbeafe; color: #1d4ed8; }
-.s-purple { background: #ede9fe; color: #6d28d9; }
-.s-orange { background: #fff7ed; color: #c2410c; }
-.s-yellow { background: #fefce8; color: #a16207; }
-.s-gray   { background: #f3f4f6; color: #6b7280; }
-.s-sky    { background: #e0f2fe; color: #0369a1; }
-
-/* ── Status dropdown ── */
-.status-menu { position: fixed; background: white; border: 1px solid #e5e7eb; border-radius: 10px; padding: 6px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); z-index: 300; min-width: 200px; }
-.status-option { padding: 8px 12px; border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: 500; }
-.status-option:hover { background: #f5f5f3; }
-
-
 /* ── Weken (weekbord) ── */
 .weken { max-width: 700px; margin: 0 auto; padding: 16px 16px 60px; }
 .wk-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
@@ -229,7 +200,6 @@ tr:last-child td { border-bottom: none; }
   <div class="main-nav">
     <button class="nav-tab active" data-view="taken">Taken</button>
     <button class="nav-tab" data-view="weken">Weken</button>
-    <button class="nav-tab" data-view="overzicht">Overzicht</button>
     <button class="nav-tab" data-view="geschiedenis">Geschiedenis</button>
   </div>
   <div class="proj-filters" id="projFilters" style="display:none"></div>
@@ -245,14 +215,6 @@ tr:last-child td { border-bottom: none; }
 
 <div id="viewGeschiedenis" style="display:none">
   <div class="gesch-main" id="geschMain"><div class="empty">Laden...</div></div>
-</div>
-
-<div id="viewOverzicht" style="display:none">
-  <div class="overzicht">
-    <div class="ov-scroll">
-      <div id="overzichtMain"><div class="empty">Laden...</div></div>
-    </div>
-  </div>
 </div>
 
 <!-- Add task modal -->
@@ -324,23 +286,6 @@ tr:last-child td { border-bottom: none; }
   </div>
 </div>
 
-<!-- Project entry edit modal -->
-<div class="overlay" id="projEntryOverlay">
-  <div class="modal">
-    <h2 id="projEntryTitle">Projectregel bewerken</h2>
-    <div class="fg"><label>Naam</label><input type="text" id="peNaam" /></div>
-    <div class="fg"><label>Status</label><select id="peStatus"></select></div>
-    <div class="fg"><label>Opmerking (optioneel)</label><textarea id="peOpmerking" placeholder="Extra info, link..."></textarea></div>
-    <div class="modal-btns">
-      <button class="btn-cancel" id="btnProjEntryCancel">Annuleren</button>
-      <button class="btn-save" id="btnProjEntrySave">Opslaan</button>
-    </div>
-  </div>
-</div>
-
-<!-- Status dropdown -->
-<div class="status-menu" id="statusMenu" style="display:none"></div>
-
 <!-- Mail modal -->
 <div class="mail-overlay" id="mailOverlay">
   <div class="mail-modal">
@@ -377,11 +322,9 @@ const API = 'https://todo-api.ilse-grootjes.workers.dev';
 let tasks = [];
 let doneTasks = [];
 let doneVisible = false;
-let projects = {};
 let projectsList = []; // dynamic project list from Notion schema
 let projFilter = 'alles';
 let currentView = 'taken';
-let statusMenuTarget = null;
 
 const todayStr = new Date().toISOString().split('T')[0];
 const in7 = new Date(Date.now() + 7*864e5).toISOString().split('T')[0];
@@ -410,56 +353,6 @@ function badgeStyle(colorName) {
   return `background:${c.bg};color:${c.text}`;
 }
 
-// ── Project status options (for overzicht dropdowns) ──
-const STATUS_OPTIONS = {
-  weekmenuflyer: ['Nog niet begonnen','Wachtend op GO Pieter','Bezig','Klaar voor proofread','Besteld','Geleverd'],
-  koelkast:      ['Nog niet begonnen','Wachtend op GO Pieter','Bezig','Product informatie verwerkt','Bestelling geplaatst','Klaar'],
-  menuplanning:  ['Menu gemaakt','Pieter GO','Menu klaargezet in Shopify','Import gedraaid','Collectie gecheckt','Live gegaan'],
-};
-
-// Deadline offset (days from Live/Friday) for each status — from the rules spreadsheet
-const STATUS_DEADLINES = {
-  menuplanning: {
-    'Menu gemaakt':               -28,
-    'Pieter GO':                  -28,
-    'Menu klaargezet in Shopify': -14,
-    'Import gedraaid':            -14,
-    'Collectie gecheckt':          -7,
-    'Live gegaan':                  0,
-  },
-  weekmenuflyer: {
-    'Wachtend op GO Pieter': -28,
-    'Bezig':                 -28,
-    'Klaar voor proofread':  -21,
-    'Besteld':               -14,
-    'Geleverd':               -7,
-  },
-  koelkast: {
-    'Wachtend op GO Pieter':       -28,
-    'Bezig':                       -28,
-    'Product informatie verwerkt': -14,
-    'Bestelling geplaatst':          0,
-    'Klaar':                        10,
-  },
-};
-
-function statusClass(s) {
-  if (!s) return 'empty';
-  const green  = ['Geleverd','Live gegaan','Klaar'];
-  const blue   = ['Besteld','Bestelling geplaatst'];
-  const purple = ['Klaar voor proofread'];
-  const orange = ['Bezig','Product informatie verwerkt'];
-  const yellow = ['Wachtend op GO Pieter','Pieter GO'];
-  const sky    = ['Menu gemaakt','Menu klaargezet in Shopify','Import gedraaid','Collectie gecheckt'];
-  if (green.includes(s))  return 's-green';
-  if (blue.includes(s))   return 's-blue';
-  if (purple.includes(s)) return 's-purple';
-  if (orange.includes(s)) return 's-orange';
-  if (yellow.includes(s)) return 's-yellow';
-  if (sky.includes(s))    return 's-sky';
-  return 's-gray';
-}
-
 function weekNum(wStr) {
   const m = wStr.match(/\d+/);
   return m ? parseInt(m[0]) : 999;
@@ -477,31 +370,6 @@ function weekDates(wStr) {
   const thu = new Date(fri);    thu.setDate(fri.getDate() + 6);
   const fmt = d => `${d.getDate()} ${MS[d.getMonth()]}`;
   return `vr ${fmt(fri)} – do ${fmt(thu)}`;
-}
-
-// Friday (= Live date) of ISO week N
-function fridayOfWeek(n) {
-  const yr = new Date().getFullYear();
-  const jan4 = new Date(yr, 0, 4);
-  const jan4Day = jan4.getDay() || 7;
-  const monday = new Date(jan4);
-  monday.setDate(jan4.getDate() - (jan4Day - 1) + (n - 1) * 7);
-  const fri = new Date(monday);
-  fri.setDate(monday.getDate() - 3);
-  return fri;
-}
-
-// Deadline for reaching the NEXT status (= the upcoming milestone)
-function nextStatusDeadlineDate(proj, currentStatus, weekN) {
-  const options = STATUS_OPTIONS[proj] || [];
-  const idx = options.indexOf(currentStatus);
-  if (idx === -1 || idx === options.length - 1) return null;
-  const nextStatus = options[idx + 1];
-  const offset = STATUS_DEADLINES[proj]?.[nextStatus];
-  if (offset === undefined) return null;
-  const d = fridayOfWeek(weekN);
-  d.setDate(d.getDate() + offset);
-  return d;
 }
 
 function isLate(d)  { return d && d < todayStr; }
@@ -546,12 +414,10 @@ document.querySelectorAll('.nav-tab').forEach(btn => {
     btn.classList.add('active');
     currentView = btn.dataset.view;
     document.getElementById('viewTaken').style.display       = currentView === 'taken'      ? '' : 'none';
-    document.getElementById('viewOverzicht').style.display   = currentView === 'overzicht'  ? '' : 'none';
     document.getElementById('viewWeken').style.display       = currentView === 'weken'      ? '' : 'none';
     document.getElementById('viewGeschiedenis').style.display= currentView === 'geschiedenis'? '' : 'none';
     document.getElementById('projFilters').style.display     = currentView === 'taken'      ? 'flex' : 'none';
     document.getElementById('btnAdd').style.display          = currentView === 'taken'      ? '' : 'none';
-    if (currentView === 'overzicht') loadProjects();
     if (currentView === 'weken') loadWeken();
     if (currentView === 'geschiedenis') loadRecent();
   });
@@ -674,208 +540,6 @@ function taskCard(t) {
   </div>`;
 }
 
-// ── Overzicht view ──
-function currentISOWeek() {
-  const n = new Date();
-  const jan4 = new Date(n.getFullYear(), 0, 4);
-  const jan4Day = jan4.getDay() || 7;
-  const monday = new Date(jan4);
-  monday.setDate(jan4.getDate() - (jan4Day - 1));
-  return Math.floor((n - monday) / (7 * 864e5)) + 1;
-}
-
-function renderOverzicht() {
-  if (!Object.keys(projects).length) return;
-
-  const map = {};
-  ['menuplanning','weekmenuflyer','koelkast'].forEach(k => {
-    map[k] = {};
-    (projects[k] || []).forEach(e => {
-      const n = weekNum(e.week);
-      if (n !== 999 && !map[k][n]) map[k][n] = e;
-    });
-  });
-
-  const curWeek = currentISOWeek();
-  const maxWeek = Math.max(52, curWeek + 10);
-  const pastCutoff   = curWeek - 4;
-  const futureCutoff = curWeek + 4;
-
-  const rows = [];
-  let pastToggleInserted = false;
-
-  for (let wn = 1; wn <= maxWeek; wn++) {
-    const isCurrent   = wn === curWeek;
-    const isPast      = wn < curWeek;
-    const isFarPast   = wn < pastCutoff;
-    const isFarFuture = wn > futureCutoff;
-    let rowClass = isCurrent ? 'current-week-row' : '';
-    if (isFarPast)   rowClass += (rowClass ? ' ' : '') + 'far-past-row';
-    if (isFarFuture) rowClass += (rowClass ? ' ' : '') + 'far-future-row';
-
-    const live = fridayOfWeek(wn);
-    const liveStr = `${live.getDate()} ${MS[live.getMonth()]}`;
-    const liveIso = live.toISOString().slice(0, 10);
-
-    // Columns: menuplanning, weekmenuflyer (=Flyer), koelkast — matches spreadsheet order
-    let hasOverdue = false;
-    const cells = ['menuplanning','weekmenuflyer','koelkast'].map(k => {
-      const entry = map[k][wn];
-      const s = entry?.status || null;
-
-      if (s) {
-        const options = STATUS_OPTIONS[k] || [];
-        const idx = options.indexOf(s);
-        const nextStatus = idx !== -1 && idx < options.length - 1 ? options[idx + 1] : null;
-        const dl = nextStatus ? nextStatusDeadlineDate(k, s, wn) : null;
-        let nextLine = '';
-        if (nextStatus && dl) {
-          const dlIso = dl.toISOString().slice(0, 10);
-          const late  = !isPast && dlIso < todayStr;
-          if (late) hasOverdue = true;
-          const color = late ? '#ef4444' : '#9ca3af';
-          const weight = late ? '700' : '400';
-          nextLine = `<div style="font-size:10px;color:${color};font-weight:${weight};margin-top:3px;white-space:nowrap">${esc(nextStatus.toLowerCase())} — ${dl.getDate()} ${MS[dl.getMonth()]}</div>`;
-        }
-        return `<td><span class="status-badge ${statusClass(s)}" data-proj="${k}" data-id="${entry.id}" data-week="Week ${wn}" onclick="openStatusMenu(event,this)">${esc(s)}</span>${nextLine}</td>`;
-      }
-      if (isPast || isCurrent) return `<td><span class="status-badge s-green" data-proj="${k}" data-id="" data-week="Week ${wn}" onclick="openStatusMenu(event,this)" style="cursor:pointer">Klaar</span></td>`;
-      return `<td><span class="status-badge empty" data-proj="${k}" data-id="" data-week="Week ${wn}" onclick="openStatusMenu(event,this)">—</span></td>`;
-    }).join('');
-
-    const rowStyleParts = [];
-    if (isFarPast || isFarFuture) rowStyleParts.push('display:none');
-    else if (hasOverdue) rowStyleParts.push('background:#fff5f5');
-    const rowStyle = rowStyleParts.length ? ` style="${rowStyleParts.join(';')}"` : '';
-
-    if (!pastToggleInserted && wn === pastCutoff) {
-      pastToggleInserted = true;
-      rows.push(`<tr class="overzicht-toggle-row">
-        <td colspan="5" style="text-align:center;padding:8px 0;cursor:pointer;color:#9ca3af;font-size:12px;user-select:none" onclick="toggleFarPast(this)">
-          ▲ Toon weken eerder dan -4
-        </td>
-      </tr>`);
-    }
-    if (wn === futureCutoff + 1) {
-      rows.push(`<tr class="overzicht-toggle-row">
-        <td colspan="5" style="text-align:center;padding:8px 0;cursor:pointer;color:#9ca3af;font-size:12px;user-select:none" onclick="toggleFarFuture(this)">
-          ▼ Toon weken verder dan +4
-        </td>
-      </tr>`);
-    }
-
-    const rowEntries = ['menuplanning','weekmenuflyer','koelkast'].map(k => {
-      const e = map[k][wn];
-      return e ? `${k}:${e.id}` : '';
-    }).filter(Boolean).join(',');
-
-    rows.push(`<tr${rowClass ? ` class="${rowClass}"` : ''}${rowStyle}>
-      <td class="week-cell${isCurrent ? ' current' : ''}" style="cursor:pointer" onclick="openProjRowMenu(event,${wn},'${rowEntries}')" title="Bewerken">
-        Week ${wn}
-      </td>
-      <td style="font-size:12px;color:${isPast && liveIso < todayStr ? '#ef4444' : '#6b7280'};font-weight:500;white-space:nowrap">${liveStr}</td>
-      ${cells}
-    </tr>`);
-  }
-
-  document.getElementById('overzichtMain').innerHTML = `
-    <table>
-      <thead><tr>
-        <th>Week</th>
-        <th>Live</th>
-        <th style="color:#6d28d9">Menuplanning</th>
-        <th style="color:#1d4ed8">Flyer</th>
-        <th style="color:#c2410c">Koelkast</th>
-      </tr></thead>
-      <tbody>${rows.join('')}</tbody>
-    </table>
-  `;
-}
-
-function toggleFarFuture(btn) {
-  const rows = document.querySelectorAll('.far-future-row');
-  const isHidden = rows[0]?.style.display === 'none';
-  rows.forEach(r => r.style.display = isHidden ? '' : 'none');
-  btn.textContent = isHidden ? '▲ Verberg weken verder dan +4' : '▼ Toon weken verder dan +4';
-}
-
-function toggleFarPast(btn) {
-  const rows = document.querySelectorAll('.far-past-row');
-  const isHidden = rows[0]?.style.display === 'none';
-  rows.forEach(r => r.style.display = isHidden ? '' : 'none');
-  btn.textContent = isHidden ? '▼ Verberg weken eerder dan -4' : '▲ Toon weken eerder dan -4';
-}
-
-function openStatusMenu(e, el) {
-  e.stopPropagation();
-  const proj = el.dataset.proj;
-  const id   = el.dataset.id;
-  const week = el.dataset.week || '';
-  const options = STATUS_OPTIONS[proj] || [];
-
-  const menu = document.getElementById('statusMenu');
-  menu.innerHTML = options.map(s =>
-    `<div class="status-option" data-status="${esc(s)}">${esc(s)}</div>`
-  ).join('');
-
-  const rect = el.getBoundingClientRect();
-  menu.style.top  = (rect.bottom + 6) + 'px';
-  menu.style.left = rect.left + 'px';
-  menu.style.display = 'block';
-  statusMenuTarget = { id, el, proj, week };
-
-  menu.querySelectorAll('.status-option').forEach(opt => {
-    opt.addEventListener('click', () => setStatus(opt.dataset.status));
-  });
-}
-
-async function setStatus(newStatus) {
-  const { id, el, proj, week } = statusMenuTarget;
-  document.getElementById('statusMenu').style.display = 'none';
-
-  const prev = el.textContent;
-  const prevClass = el.className;
-  el.textContent = newStatus;
-  el.className = `status-badge ${statusClass(newStatus)}`;
-
-  try {
-    if (!id) {
-      // Entry bestaat nog niet in Notion → aanmaken
-      const r = await fetch(`${API}/projects`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ proj, week, status: newStatus }),
-      });
-      const data = await r.json();
-      if (!r.ok) throw new Error(data.error || 'Aanmaken mislukt');
-      el.dataset.id = data.id;
-      if (!projects[proj]) projects[proj] = [];
-      projects[proj].push({ id: data.id, week, status: newStatus });
-    } else {
-      const arr = projects[proj];
-      const entry = arr?.find(e => e.id === id);
-      if (entry) entry.status = newStatus;
-      const r = await fetch(`${API}/projects/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus, proj }),
-      });
-      if (!r.ok) throw new Error('Opslaan mislukt');
-    }
-    toast('Status bijgewerkt');
-    // Bijbehorende taken kunnen door deze statuswijziging zijn afgevinkt
-    await Promise.all([loadTasks(), loadDoneTasks()]);
-  } catch {
-    el.textContent = prev;
-    el.className = prevClass;
-    toast('Opslaan mislukt');
-  }
-}
-
-document.addEventListener('click', () => {
-  document.getElementById('statusMenu').style.display = 'none';
-});
-
 // ── API calls ──
 async function loadTasks() {
   try {
@@ -884,17 +548,6 @@ async function loadTasks() {
     renderTaken();
   } catch {
     document.getElementById('takenMain').innerHTML = '<div class="empty">Kan Notion niet bereiken</div>';
-  }
-}
-
-async function loadProjects() {
-  document.getElementById('overzichtMain').innerHTML = '<div class="empty">Laden...</div>';
-  try {
-    const r = await fetch(`${API}/projects`);
-    projects = await r.json();
-    renderOverzicht();
-  } catch {
-    document.getElementById('overzichtMain').innerHTML = '<div class="empty">Kan projecten niet laden</div>';
   }
 }
 
@@ -1346,104 +999,6 @@ async function loadDoneTasks() {
     doneTasks = await r.json();
   } catch { doneTasks = []; }
 }
-
-// ── Project entry edit modal ──
-let projEntryTarget = null; // { proj, entry }
-
-const PROJ_LABELS = { weekmenuflyer: 'Weekmenuflyer', menuplanning: 'Menuplanning', koelkast: 'Koelkast' };
-
-function openProjRowMenu(e, wn, entryStr) {
-  // Pick which project to edit: show a small picker if multiple exist, else open directly
-  const entries = entryStr.split(',').map(s => {
-    const [proj, id] = s.split(':');
-    return { proj, id };
-  });
-
-  if (entries.length === 0) return;
-
-  // If only one project has an entry for this week, open it directly
-  // Otherwise ask which project
-  if (entries.length === 1) {
-    const { proj, id } = entries[0];
-    const entry = (projects[proj] || []).find(x => x.id === id);
-    if (entry) openProjEntryModal(proj, entry);
-  } else {
-    // Build a small inline picker
-    const menu = document.getElementById('statusMenu');
-    menu.innerHTML = entries.map(({ proj, id }) =>
-      `<div class="status-option" data-proj="${proj}" data-id="${id}">${PROJ_LABELS[proj] || proj}</div>`
-    ).join('');
-    const rect = e.currentTarget.getBoundingClientRect();
-    menu.style.top  = (rect.bottom + 4) + 'px';
-    menu.style.left = rect.left + 'px';
-    menu.style.display = 'block';
-    menu.querySelectorAll('.status-option').forEach(opt => {
-      opt.addEventListener('click', (ev) => {
-        ev.stopPropagation();
-        menu.style.display = 'none';
-        const entry = (projects[opt.dataset.proj] || []).find(x => x.id === opt.dataset.id);
-        if (entry) openProjEntryModal(opt.dataset.proj, entry);
-      });
-    });
-  }
-  e.stopPropagation();
-}
-
-function openProjEntryModal(proj, entry) {
-  projEntryTarget = { proj, entry };
-  document.getElementById('projEntryTitle').textContent = `${PROJ_LABELS[proj]} — ${entry.week}`;
-
-  document.getElementById('peNaam').value      = entry.week || '';
-  document.getElementById('peOpmerking').value = entry.opmerking || '';
-
-  const sel = document.getElementById('peStatus');
-  const opts = STATUS_OPTIONS[proj] || [];
-  sel.innerHTML = '<option value="">— Geen status —</option>' +
-    opts.map(s => `<option value="${esc(s)}"${entry.status === s ? ' selected' : ''}>${esc(s)}</option>`).join('');
-
-  document.getElementById('projEntryOverlay').classList.add('open');
-  setTimeout(() => document.getElementById('peNaam').focus(), 50);
-}
-
-document.getElementById('btnProjEntryCancel').onclick = () =>
-  document.getElementById('projEntryOverlay').classList.remove('open');
-document.getElementById('projEntryOverlay').addEventListener('click', e => {
-  if (e.target === document.getElementById('projEntryOverlay'))
-    document.getElementById('projEntryOverlay').classList.remove('open');
-});
-
-document.getElementById('btnProjEntrySave').onclick = async () => {
-  if (!projEntryTarget) return;
-  const btn = document.getElementById('btnProjEntrySave');
-  btn.textContent = 'Opslaan...'; btn.disabled = true;
-
-  const { proj, entry } = projEntryTarget;
-  const naam      = document.getElementById('peNaam').value.trim();
-  const status    = document.getElementById('peStatus').value || null;
-  const opmerking = document.getElementById('peOpmerking').value.trim() || null;
-
-  try {
-    await fetch(`${API}/projects/${entry.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status, proj }),
-    });
-
-    // Update local data
-    entry.week      = naam;
-    entry.status    = status;
-    entry.opmerking = opmerking;
-
-    document.getElementById('projEntryOverlay').classList.remove('open');
-    renderOverzicht();
-    toast('Opgeslagen');
-  } catch {
-    toast('Opslaan mislukt');
-  } finally {
-    btn.textContent = 'Opslaan'; btn.disabled = false;
-  }
-};
-
 
 // ── Weken (weekbord) ──
 let weekbord = null;

@@ -4,6 +4,7 @@ compatibility_date = "2024-01-15"
 
 [vars]
 PIM_URL = "https://thuysvers-pim.pages.dev"
+NOTION_WEEKBORD_DB = "a945e10df9124bcf9443699457b6945e"
 
 [triggers]
 crons = ["*/15 * * * *"]

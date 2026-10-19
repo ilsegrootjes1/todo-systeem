@@ -1,4 +1,4 @@
-import { sync, bord, zetHandmatig, logboek, alleKlaar } from './weken.js';
+import { sync, bord, zetHandmatig, logboek } from './weken.js';
 
 const TASKS_DB    = '47ae20e8-094b-475b-81fc-7efdf7f5d069';
 const OVERZICHT_DB = '38217522-60d6-819b-ba0b-cbd50c11e372';
@@ -185,45 +185,65 @@ async function maybeUpdateProjectStatus(env, taskName, doelweek, deadline) {
   }
 }
 
-// Weekbord → Notion Weekoverzicht: een afgevinkte stap zet de status in Notion vooruit (nooit terug),
-// zodat iedereen die in Notion kijkt hetzelfde ziet als op het weekbord.
-const STAP_NAAR_OVERZICHT = {
-  menu:                [{ col: 'Menuplanning', status: 'Menu gemaakt' }, { col: 'Koelkast', status: 'Wachtend op GO Pieter' }, { col: 'Weekmenuflyer', status: 'Wachtend op GO Pieter' }],
-  go:                  [{ col: 'Menuplanning', status: 'Pieter GO' }, { col: 'Koelkast', status: 'Bezig' }, { col: 'Weekmenuflyer', status: 'Bezig' }],
-  koelkast_info:       [{ col: 'Koelkast', status: 'Product informatie verwerkt' }],
-  koelkast_bestelling: [{ col: 'Koelkast', status: 'Bestelling geplaatst' }],
-  flyer_gemaakt:       [{ col: 'Weekmenuflyer', status: 'Klaar voor proofread' }],
-  flyer_besteld:       [{ col: 'Weekmenuflyer', status: 'Besteld' }],
-  flyer_binnen:        [{ col: 'Weekmenuflyer', status: 'Geleverd' }],
-  menucheck:           [{ col: 'Menuplanning', status: 'Collectie gecheckt' }],
-  live_check:          [{ col: 'Menuplanning', status: 'Live gegaan' }],
+// Weekbord → Notion: een eigen database "Weekbord" (één rij per menuweek, één kolom per stap; id in var
+// NOTION_WEEKBORD_DB, de integratie moet er via "Verbindingen" toegang toe hebben),
+// zodat Aron in Notion precies ziet wat er op het weekbord staat. Alleen gewijzigde weken worden bijgewerkt.
+const NOTION_STATUS = {
+  klaar:     { name: '✓ Klaar', color: 'green' },
+  open:      { name: 'Open',    color: 'default' },
+  bijna:     { name: 'Bijna',   color: 'orange' },
+  'te-laat': { name: 'Te laat', color: 'red' },
+  nvt:       { name: 'n.v.t.',  color: 'gray' },
 };
+const DAG = ['zo', 'ma', 'di', 'wo', 'do', 'vr', 'za'];
+const MAAND = ['jan', 'feb', 'mrt', 'apr', 'mei', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'];
+const kortDatum = iso => { const d = new Date(iso + 'T12:00:00Z'); return `${DAG[d.getUTCDay()]} ${d.getUTCDate()} ${MAAND[d.getUTCMonth()]}`; };
+const tekst = t => ({ rich_text: t ? [{ text: { content: t.slice(0, 1900) } }] : [] });
 
-async function weekbordNaarNotion(env, klaar) {
-  const perWeek = {};
-  for (const [week, stap] of klaar || []) {
-    for (const u of STAP_NAAR_OVERZICHT[stap] || []) (perWeek[week] ||= []).push(u);
-  }
-  if (!Object.keys(perWeek).length) return 0;
-  const rows = await queryAllOvz(env);
-  let aangepast = 0;
-  for (const [week, updates] of Object.entries(perWeek)) {
-    const nr = parseInt(week.split('-W')[1]);
-    const entry = rows.find(p => {
-      const tp = Object.values(p.properties).find(x => x.type === 'title');
-      return weekNumFromTitle(tp?.title?.[0]?.plain_text) === nr;
-    });
-    const properties = {};
-    for (const { col, status } of updates) {
-      const huidig = properties[col]?.select?.name || entry?.properties?.[col]?.select?.name || null;
-      if (statusRank(col, status) > (huidig ? statusRank(col, huidig) : -1)) properties[col] = { select: { name: status } };
+async function metaGet(env, k) {
+  const r = await env.DB.prepare('SELECT v FROM meta WHERE k = ?').bind(k).first();
+  return r ? JSON.parse(r.v) : null;
+}
+async function metaSet(env, k, v) {
+  await env.DB.prepare('INSERT INTO meta (k, v) VALUES (?, ?) ON CONFLICT (k) DO UPDATE SET v = excluded.v').bind(k, JSON.stringify(v)).run();
+}
+
+async function weekbordNaarNotion(env, { forceer = false } = {}) {
+  const b = await bord(env);
+  const dbId = env.NOTION_WEEKBORD_DB;
+  if (!dbId) throw new Error('NOTION_WEEKBORD_DB ontbreekt');
+  let bijgewerkt = 0;
+  for (const w of b.weken) {
+    const tellend = w.stappen.filter(s => s.status !== 'nvt');
+    const open = tellend.filter(s => s.status !== 'klaar');
+    const properties = {
+      Week: { title: [{ text: { content: `Week ${parseInt(w.week.split('-W')[1])}` } }] },
+      Live: { date: { start: w.live } },
+      Voortgang: tekst(`${tellend.length - open.length}/${tellend.length}`),
+      'Te laat': { number: open.filter(s => s.status === 'te-laat').length },
+      'Nog open': tekst(open.map(s => `${s.status === 'te-laat' ? '⚠ ' : ''}${s.naam} (${kortDatum(s.deadline)})`).join(', ')),
+    };
+    for (const s of w.stappen) properties[s.naam] = { select: { name: NOTION_STATUS[s.status].name } };
+
+    const hash = JSON.stringify(properties);
+    const vorige = await metaGet(env, `notion_wk_${w.week}`);
+    if (!forceer && vorige?.hash === hash) continue;
+    properties.Bijgewerkt = { date: { start: new Date().toISOString() } };
+
+    let pageId = vorige?.pageId;
+    if (pageId) {
+      const r = await notion(env, `/pages/${pageId}`, 'PATCH', { properties });
+      if (r.object === 'error') pageId = null;
     }
-    if (!Object.keys(properties).length) continue;
-    if (entry) await notion(env, `/pages/${entry.id}`, 'PATCH', { properties });
-    else await notion(env, '/pages', 'POST', { parent: { database_id: OVERZICHT_DB }, properties: { Week: { title: [{ text: { content: `Week ${nr}` } }] }, ...properties } });
-    aangepast++;
+    if (!pageId) {
+      const r = await notion(env, '/pages', 'POST', { parent: { database_id: dbId }, properties });
+      if (!r.id) throw new Error(`Notion: rij ${w.week} mislukt (${r.message || r.code}). Heeft de integratie toegang tot de database Weekbord?`);
+      pageId = r.id;
+    }
+    await metaSet(env, `notion_wk_${w.week}`, { pageId, hash });
+    bijgewerkt++;
   }
-  return aangepast;
+  return { dbId, bijgewerkt };
 }
 
 const cors = {
@@ -292,13 +312,13 @@ export default {
       // ── Weekbord ──
       if (pathname === '/weken' && method === 'GET') {
         if (url.searchParams.get('sync') === '1') {
-          const r = await sync(env);
-          await weekbordNaarNotion(env, r.nieuwKlaar).catch(() => {});
+          await sync(env);
+          await weekbordNaarNotion(env).catch(() => {});
         }
         return json(await bord(env));
       }
       if (pathname === '/weken/notion-sync' && method === 'POST') {
-        return json({ aangepast: await weekbordNaarNotion(env, await alleKlaar(env)) });
+        return json(await weekbordNaarNotion(env, { forceer: true }));
       }
       if (pathname === '/weken/log' && method === 'GET') {
         return json(await logboek(env, url.searchParams.get('week')));
@@ -307,7 +327,7 @@ export default {
       if (stapMatch && method === 'POST') {
         const body = await request.json();
         await zetHandmatig(env, stapMatch[1], stapMatch[2], { klaar: !!body.klaar, door: body.door });
-        if (body.klaar) await weekbordNaarNotion(env, [[stapMatch[1], stapMatch[2]]]).catch(() => {});
+        await weekbordNaarNotion(env).catch(() => {});
         return json(await bord(env));
       }
 
@@ -525,6 +545,6 @@ export default {
   },
 
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(sync(env).then(r => weekbordNaarNotion(env, r.nieuwKlaar)));
+    ctx.waitUntil(sync(env).then(() => weekbordNaarNotion(env)));
   },
 };

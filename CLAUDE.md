@@ -44,7 +44,6 @@ Elke week horen deze taken te bestaan (allemaal Herhaling=Wekelijks):
 3. Weekmenuflyer maken (week +4)
 4. Koelkast productinformatie invullen en sturen (week +4)
 5. Pieter heeft menu GO gegeven
-6. Menucheck in verborgen collectie (week +2)
 7. Weekmenuflyer bestellen (week +2)
 8. Weekmenu post inplannen (week +2)
 9. Retentie ads klaarzetten (week +2)

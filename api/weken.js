@@ -21,7 +21,6 @@ export const STAPPEN = [
   { key: 'retentie',       naam: 'Retentie-ads naar Marcus',         fase: 'voorbereiding', dl: -28, bron: 'Builder' },
   // ── Uitvoer: in de week vóór de levering ──
   { key: 'flyer_binnen',        naam: 'Flyers binnen (depot of opgehaald)', fase: 'uitvoer', dl: -2, bron: 'Drukwerk' },
-  { key: 'menucheck',           naam: 'Menucheck in verborgen collectie',   fase: 'uitvoer', dl: -1, bron: null },
   { key: 'koelkast_bestelling', naam: 'Koelkastbestelling geplaatst',       fase: 'uitvoer', dl: -1, bron: null },
   { key: 'proef_bestelling',    naam: 'Proefbestelling geplaatst',          fase: 'uitvoer', dl: -1, bron: null },
   { key: 'live_check',          naam: 'Live menucheck',                     fase: 'uitvoer', dl:  0, bron: null },

@@ -23,9 +23,9 @@ export const STAPPEN = [
   { key: 'flyer_binnen',        naam: 'Flyers binnen (depot of opgehaald)', fase: 'uitvoer', dl: -2, bron: 'Drukwerk' },
   // Bestellingen: geplaatst binnen de bestelweek zelf (vr t/m do, Ilse 20-10), dus deadline = donderdag.
   // PIM leest de Shopify-orders: Marc op zijn eigen mail, koelkast (bezorgnaam 'Koelkast …') en proef op die van Ilse.
-  { key: 'koelkast_bestelling', naam: 'Koelkastbestelling geplaatst',       fase: 'uitvoer', dl:  6, bron: 'PIM' },
-  { key: 'proef_bestelling',    naam: 'Proefbestelling geplaatst',          fase: 'uitvoer', dl:  6, bron: 'PIM' },
-  { key: 'marc_bestelling',     naam: 'Bestelling Marc geplaatst',          fase: 'uitvoer', dl:  6, bron: 'PIM' },
+  { key: 'koelkast_bestelling', naam: 'Koelkastbestelling geplaatst',       fase: 'uitvoer', dl:  6, bron: 'PIM', start: '2026-W43' },
+  { key: 'proef_bestelling',    naam: 'Proefbestelling geplaatst',          fase: 'uitvoer', dl:  6, bron: 'PIM', start: '2026-W43' },
+  { key: 'marc_bestelling',     naam: 'Bestelling Marc geplaatst',          fase: 'uitvoer', dl:  6, bron: 'PIM', start: '2026-W43' },
   { key: 'live_check',          naam: 'Live menucheck',                     fase: 'uitvoer', dl:  0, bron: null },
 ];
 const STAP = Object.fromEntries(STAPPEN.map(s => [s.key, s]));
@@ -266,7 +266,7 @@ export async function bord(env, nu = new Date()) {
         const dagenOver = Math.round((new Date(deadline) - new Date(vandaag)) / 864e5);
         const bronStuk = s.bron && meta && JSON.parse(meta.v).status?.[s.bron]?.ok === false;
         const status = r.klaar_at ? 'klaar'
-          : week < BORD_START[s.fase] ? 'nvt'
+          : week < (s.start || BORD_START[s.fase]) ? 'nvt'
           : bronStuk ? 'onbekend'
           : dagenOver < 0 ? 'te-laat' : dagenOver <= 2 ? 'bijna' : 'open';
         return {

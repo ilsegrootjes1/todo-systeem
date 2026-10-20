@@ -4,6 +4,7 @@ const TASKS_DB    = '47ae20e8-094b-475b-81fc-7efdf7f5d069';
 const OVERZICHT_DB = '38217522-60d6-819b-ba0b-cbd50c11e372';
 
 const SYSTEM_PROJECTS = ['Weekmenuflyer', 'Menuplanning', 'Koelkast'];
+const PROJECT_KLEUREN = ['default', 'gray', 'brown', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink', 'red'];
 
 // col = kolomnaam in OVERZICHT_DB
 const STATUS_RULES = [
@@ -356,9 +357,11 @@ export default {
       if (pathname === '/tasks/projects' && method === 'GET') {
         const db = await notion(env, `/databases/${TASKS_DB}`);
         const options = db.properties?.Project?.select?.options || [];
+        // kleuren kiest Ilse in de app; Notion kan een optiekleur niet via de API wijzigen
+        const kleuren = (await metaGet(env, 'projectkleuren')) || {};
         return json(options
           .filter(o => o.name !== 'Gmail')
-          .map(o => ({ name: o.name, color: o.color || 'default' }))
+          .map(o => ({ name: o.name, color: kleuren[o.name] || o.color || 'default' }))
         );
       }
 
@@ -376,6 +379,18 @@ export default {
             Project: { select: { options: [...existing, { name: body.name.trim(), color: body.color || 'default' }] } }
           }
         });
+        return json({ ok: true });
+      }
+
+      // PUT /tasks/projects/:name/kleur — kleur kiezen (opgeslagen in de app, zie GET)
+      const projKleurMatch = pathname.match(/^\/tasks\/projects\/(.+)\/kleur$/);
+      if (projKleurMatch && method === 'PUT') {
+        const name = decodeURIComponent(projKleurMatch[1]);
+        const { color } = await request.json();
+        if (!PROJECT_KLEUREN.includes(color)) return json({ error: 'Onbekende kleur' }, 400);
+        const kleuren = (await metaGet(env, 'projectkleuren')) || {};
+        kleuren[name] = color;
+        await metaSet(env, 'projectkleuren', kleuren);
         return json({ ok: true });
       }
 
@@ -412,6 +427,8 @@ export default {
         await notion(env, `/databases/${TASKS_DB}`, 'PATCH', {
           properties: { Project: { select: { options: (na.properties?.Project?.select?.options || []).filter(o => o.name !== name) } } }
         });
+        const kleuren = (await metaGet(env, 'projectkleuren')) || {};
+        if (kleuren[name]) { kleuren[(bestaand || { name: nieuw }).name] ??= kleuren[name]; delete kleuren[name]; await metaSet(env, 'projectkleuren', kleuren); }
         return json({ ok: true, klaar: true, verplaatst: q.results.length });
       }
 

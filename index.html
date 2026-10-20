@@ -126,8 +126,18 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 .settings-proj-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid #f5f5f3; }
 .settings-proj-row:last-child { border-bottom: none; }
 .settings-proj-name { flex: 1; font-size: 13px; color: #374151; font-weight: 500; cursor: text; }
+.settings-proj-badge { cursor: pointer; }
+.kleur-keuze { display: flex; gap: 6px; padding: 4px 0 10px; flex-wrap: wrap; }
+.kleur-bol { width: 22px; height: 22px; border-radius: 50%; border: 2px solid; cursor: pointer; padding: 0; opacity: .75; }
+.kleur-bol:hover { opacity: 1; }
+.kleur-bol.actief { opacity: 1; box-shadow: 0 0 0 2px #fff, 0 0 0 4px #374151; }
 .settings-proj-edit { color: #c4c4c4; font-size: 11px; margin-left: 4px; }
-.settings-proj-name:hover .settings-proj-edit { color: #6b7280; }
+.settings-proj-name:hover .settings-proj-badge { cursor: pointer; }
+.kleur-keuze { display: flex; gap: 6px; padding: 4px 0 10px; flex-wrap: wrap; }
+.kleur-bol { width: 22px; height: 22px; border-radius: 50%; border: 2px solid; cursor: pointer; padding: 0; opacity: .75; }
+.kleur-bol:hover { opacity: 1; }
+.kleur-bol.actief { opacity: 1; box-shadow: 0 0 0 2px #fff, 0 0 0 4px #374151; }
+.settings-proj-edit { color: #6b7280; }
 .settings-proj-input { flex: 1; font-size: 13px; padding: 4px 8px; border: 1px solid #d1d5db; border-radius: 6px; font-family: inherit; }
 .settings-proj-system { font-size: 11px; color: #d1d5db; }
 .btn-proj-del { background: none; border: none; color: #fca5a5; font-size: 12px; font-weight: 600; cursor: pointer; padding: 4px 8px; border-radius: 6px; transition: all 0.12s; }
@@ -351,6 +361,11 @@ const NOTION_COLORS = {
   red:     { bg: '#fee2e2', text: '#b91c1c' },
 };
 
+// kleur van een project: wat in de app gekozen is (projectsList), anders de Notion-kleur van de taak
+function projKleur(t) {
+  return projectsList.find(p => p.name === t.project)?.color || t.projectColor;
+}
+
 function badgeStyle(colorName) {
   const c = NOTION_COLORS[colorName] || NOTION_COLORS.default;
   return `background:${c.bg};color:${c.text}`;
@@ -395,7 +410,7 @@ async function loadProjectsList() {
     const r = await fetch(`${API}/tasks/projects`);
     projectsList = await r.json();
     populateProjectSelects();
-    if (tasks.length) renderProjFilters();
+    if (tasks.length) { renderProjFilters(); renderTaken(); }
   } catch { /* keep empty, selects stay with static fallback */ }
 }
 
@@ -481,7 +496,7 @@ function renderTaken() {
               <div class="task-body">
                 <div class="done-name">${esc(t.taak)}</div>
                 <div class="done-meta">
-                  ${t.project ? `<span class="badge" style="${badgeStyle(t.projectColor)};opacity:.6">${esc(t.project)}</span>` : ''}
+                  ${t.project ? `<span class="badge" style="${badgeStyle(projKleur(t))};opacity:.6">${esc(t.project)}</span>` : ''}
                   ${t.doelweek ? `<span class="doelw">${esc(t.doelweek)}</span>` : ''}
                 </div>
               </div>
@@ -523,7 +538,7 @@ function taskCard(t) {
     <div class="task-body">
       <div class="task-name">${esc(t.taak)}</div>
       <div class="task-meta">
-        ${t.project ? `<span class="badge" style="${badgeStyle(t.projectColor)}">${esc(t.project)}</span>` : ''}
+        ${t.project ? `<span class="badge" style="${badgeStyle(projKleur(t))}">${esc(t.project)}</span>` : ''}
         ${t.doelweek ? `<span class="doelw">${esc(t.doelweek)}</span>` : ''}
         ${t.deadline ? `<span class="dl${ov?' laat':tod?' today':''}">${fmtDate(t.deadline)}</span>` : ''}
         ${t.herhaling ? `<span class="recur-badge">↻ ${esc(t.herhaling)}</span>` : ''}
@@ -731,7 +746,7 @@ function renderProjectSettings() {
   }
   list.innerHTML = projectsList.map(p => `
     <div class="settings-proj-row">
-      <span class="badge" style="${badgeStyle(p.color)}">${esc(p.name)}</span>
+      <span class="badge settings-proj-badge" style="${badgeStyle(p.color)}" data-name="${esc(p.name)}" title="Kies een kleur">${esc(p.name)}</span>
       <span class="settings-proj-name" data-name="${esc(p.name)}" title="Klik om de naam te wijzigen">${esc(p.name)} <span class="settings-proj-edit">✎</span></span>
       ${SYSTEM.includes(p.name)
         ? '<span class="settings-proj-system">Systeem</span>'
@@ -746,6 +761,38 @@ function renderProjectSettings() {
   list.querySelectorAll('.settings-proj-name').forEach(el => {
     el.addEventListener('click', () => startRename(el));
   });
+  list.querySelectorAll('.settings-proj-badge').forEach(el => {
+    el.addEventListener('click', () => toonKleuren(el));
+  });
+}
+
+function toonKleuren(badge) {
+  const rij = badge.closest('.settings-proj-row');
+  const open = rij.nextElementSibling?.classList.contains('kleur-keuze');
+  document.querySelectorAll('.kleur-keuze').forEach(k => k.remove());
+  if (open) return;
+  const naam = badge.dataset.name;
+  const huidig = projectsList.find(p => p.name === naam)?.color || 'default';
+  const keuze = document.createElement('div');
+  keuze.className = 'kleur-keuze';
+  keuze.innerHTML = Object.keys(NOTION_COLORS).filter(k => k !== 'gray').map(k =>
+    `<button class="kleur-bol${k === huidig ? ' actief' : ''}" data-kleur="${k}" title="${k}" style="background:${NOTION_COLORS[k].bg};border-color:${NOTION_COLORS[k].text}"></button>`
+  ).join('');
+  rij.after(keuze);
+  keuze.querySelectorAll('.kleur-bol').forEach(b => b.addEventListener('click', async () => {
+    try {
+      const r = await fetch(`${API}/tasks/projects/${encodeURIComponent(naam)}/kleur`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ color: b.dataset.kleur }),
+      });
+      if (!r.ok) { toast('Kleur opslaan mislukt'); return; }
+      await loadProjectsList();
+      renderProjectSettings();
+    } catch {
+      toast('Kleur opslaan mislukt');
+    }
+  }));
 }
 
 function startRename(el) {
@@ -1020,7 +1067,7 @@ async function loadRecent() {
             <div class="gesch-body">
               <div class="gesch-name">${esc(t.taak)}</div>
               <div class="gesch-meta">
-                ${t.project ? `<span class="badge" style="${badgeStyle(t.projectColor)}">${esc(t.project)}</span>` : ''}
+                ${t.project ? `<span class="badge" style="${badgeStyle(projKleur(t))}">${esc(t.project)}</span>` : ''}
                 ${t.doelweek ? `<span class="doelw">${esc(t.doelweek)}</span>` : ''}
               </div>
             </div>

@@ -135,13 +135,15 @@ function bestellingStappen(lijst) {
   if (!Array.isArray(lijst)) return { koelkast_bestelling: { klaar: null }, proef_bestelling: { klaar: null }, marc_bestelling: { klaar: null } };
   const geldig = lijst.filter(b => !b.geannuleerd);
   const vanIlse = geldig.filter(b => b.email === 'ilse.grootjes@thuysvers.nl');
-  const naamOnbekend = vanIlse.some(b => b.bezorgnaam == null);
+  // koelkast: 'koelkast' in de ordernotitie (Ilse 20-10) of als bezorgnaam
+  const isKoelkast = b => /koelkast/i.test(`${b.notitie || ''} ${b.bezorgnaam || ''}`);
+  const naamOnbekend = vanIlse.some(b => b.bezorgnaam == null && !isKoelkast(b));
   const stap = (orders, onbekend = false) => orders.length
     ? { klaar: true, at: orders[0].at, info: orders.map(b => b.nr).join(', ') }
     : { klaar: onbekend ? null : false };
   return {
-    koelkast_bestelling: stap(vanIlse.filter(b => /koelkast/i.test(b.bezorgnaam || '')), naamOnbekend),
-    proef_bestelling:    stap(vanIlse.filter(b => b.bezorgnaam != null && !/koelkast/i.test(b.bezorgnaam)), naamOnbekend),
+    koelkast_bestelling: stap(vanIlse.filter(isKoelkast), naamOnbekend),
+    proef_bestelling:    stap(vanIlse.filter(b => !isKoelkast(b) && b.bezorgnaam != null), naamOnbekend),
     marc_bestelling:     stap(geldig.filter(b => b.email === 'marc@puurveltman.nl')),
   };
 }

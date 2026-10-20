@@ -125,7 +125,10 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 .settings-list { margin-bottom: 16px; }
 .settings-proj-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid #f5f5f3; }
 .settings-proj-row:last-child { border-bottom: none; }
-.settings-proj-name { flex: 1; font-size: 13px; color: #374151; font-weight: 500; }
+.settings-proj-name { flex: 1; font-size: 13px; color: #374151; font-weight: 500; cursor: text; }
+.settings-proj-edit { color: #c4c4c4; font-size: 11px; margin-left: 4px; }
+.settings-proj-name:hover .settings-proj-edit { color: #6b7280; }
+.settings-proj-input { flex: 1; font-size: 13px; padding: 4px 8px; border: 1px solid #d1d5db; border-radius: 6px; font-family: inherit; }
 .settings-proj-system { font-size: 11px; color: #d1d5db; }
 .btn-proj-del { background: none; border: none; color: #fca5a5; font-size: 12px; font-weight: 600; cursor: pointer; padding: 4px 8px; border-radius: 6px; transition: all 0.12s; }
 .btn-proj-del:hover { color: #ef4444; background: #fef2f2; }
@@ -729,7 +732,7 @@ function renderProjectSettings() {
   list.innerHTML = projectsList.map(p => `
     <div class="settings-proj-row">
       <span class="badge" style="${badgeStyle(p.color)}">${esc(p.name)}</span>
-      <span class="settings-proj-name">${esc(p.name)}</span>
+      <span class="settings-proj-name" data-name="${esc(p.name)}" title="Klik om de naam te wijzigen">${esc(p.name)} <span class="settings-proj-edit">✎</span></span>
       ${SYSTEM.includes(p.name)
         ? '<span class="settings-proj-system">Systeem</span>'
         : `<button class="btn-proj-del" data-name="${esc(p.name)}">Verwijderen</button>`
@@ -740,6 +743,49 @@ function renderProjectSettings() {
   list.querySelectorAll('.btn-proj-del').forEach(btn => {
     btn.addEventListener('click', () => deleteProject(btn.dataset.name));
   });
+  list.querySelectorAll('.settings-proj-name').forEach(el => {
+    el.addEventListener('click', () => startRename(el));
+  });
+}
+
+function startRename(el) {
+  const oud = el.dataset.name;
+  const input = document.createElement('input');
+  input.type = 'text'; input.value = oud; input.maxLength = 40; input.className = 'settings-proj-input';
+  el.replaceWith(input);
+  input.focus(); input.select();
+  let klaar = false;
+  const opslaan = async () => {
+    if (klaar) return; klaar = true;
+    const nieuw = input.value.trim();
+    if (!nieuw || nieuw === oud) { renderProjectSettings(); return; }
+    input.disabled = true;
+    try {
+      // de API zet de taken in porties om; herhalen tot hij klaar meldt
+      for (let ronde = 0; ronde < 30; ronde++) {
+        const r = await fetch(`${API}/tasks/projects/${encodeURIComponent(oud)}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: nieuw, doorgaan: ronde > 0 }),
+        });
+        const data = await r.json();
+        if (!r.ok) { toast(data.error || 'Mislukt'); renderProjectSettings(); return; }
+        if (data.klaar) break;
+      }
+      await loadProjectsList();
+      renderProjectSettings();
+      toast(`"${oud}" heet nu "${nieuw}"`);
+      loadTasks();
+    } catch {
+      toast('Hernoemen mislukt');
+      renderProjectSettings();
+    }
+  };
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') opslaan();
+    if (e.key === 'Escape') { klaar = true; renderProjectSettings(); }
+  });
+  input.addEventListener('blur', opslaan);
 }
 
 document.getElementById('btnAddProj').onclick = addProject;

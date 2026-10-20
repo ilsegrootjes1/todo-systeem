@@ -379,6 +379,42 @@ export default {
         return json({ ok: true });
       }
 
+      // PATCH /tasks/projects/:name — hernoemen. Notion kan een select-optie niet via de API
+      // hernoemen, dus: nieuwe optie erbij, taken in porties omzetten, daarna de oude optie weg.
+      // Per aanroep max. 35 taken (subrequest-limiet); de app herhaalt met doorgaan:true tot klaar.
+      const projRenameMatch = pathname.match(/^\/tasks\/projects\/(.+)$/);
+      if (projRenameMatch && method === 'PATCH') {
+        const name = decodeURIComponent(projRenameMatch[1]);
+        const body = await request.json();
+        const nieuw = body.name?.trim();
+        if (!nieuw) return json({ error: 'Naam vereist' }, 400);
+        if (nieuw.includes(',')) return json({ error: 'Geen komma in de naam' }, 400);
+        const db = await notion(env, `/databases/${TASKS_DB}`);
+        let opties = db.properties?.Project?.select?.options || [];
+        const oud = opties.find(o => o.name === name);
+        if (!oud) return json({ error: 'Project niet gevonden' }, 404);
+        const bestaand = opties.find(o => o.name !== name && o.name.toLowerCase() === nieuw.toLowerCase());
+        if (bestaand && !body.doorgaan) return json({ error: 'Bestaat al' }, 400);
+        if (!bestaand) {
+          opties = [...opties, { name: nieuw, color: oud.color }];
+          await notion(env, `/databases/${TASKS_DB}`, 'PATCH', { properties: { Project: { select: { options: opties } } } });
+        }
+        const q = await notion(env, `/databases/${TASKS_DB}/query`, 'POST', {
+          filter: { property: 'Project', select: { equals: name } },
+          page_size: 35,
+        });
+        if (q.object === 'error') return json({ error: q.message || 'Notion weigerde' }, 400);
+        for (const page of q.results) {
+          await notion(env, `/pages/${page.id}`, 'PATCH', { properties: { Project: { select: { name: (bestaand || { name: nieuw }).name } } } });
+        }
+        if (q.has_more) return json({ ok: true, klaar: false, verplaatst: q.results.length });
+        const na = await notion(env, `/databases/${TASKS_DB}`);
+        await notion(env, `/databases/${TASKS_DB}`, 'PATCH', {
+          properties: { Project: { select: { options: (na.properties?.Project?.select?.options || []).filter(o => o.name !== name) } } }
+        });
+        return json({ ok: true, klaar: true, verplaatst: q.results.length });
+      }
+
       // DELETE /tasks/projects/:name
       const projDeleteMatch = pathname.match(/^\/tasks\/projects\/(.+)$/);
       if (projDeleteMatch && method === 'DELETE') {

@@ -4,7 +4,8 @@ const TASKS_DB    = '47ae20e8-094b-475b-81fc-7efdf7f5d069';
 const OVERZICHT_DB = '38217522-60d6-819b-ba0b-cbd50c11e372';
 
 const SYSTEM_PROJECTS = ['Weekmenuflyer', 'Menuplanning', 'Koelkast'];
-const PROJECT_KLEUREN = ['default', 'gray', 'brown', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink', 'red'];
+const PROJECT_KLEUREN = ['default', 'gray', 'brown', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink', 'red',
+  'lime', 'mint', 'teal', 'cyan', 'sky', 'indigo', 'lila', 'rose', 'coral', 'donker']; // extra: alleen in de app
 
 // col = kolomnaam in OVERZICHT_DB
 const STATUS_RULES = [

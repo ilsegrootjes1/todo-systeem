@@ -21,8 +21,11 @@ export const STAPPEN = [
   { key: 'retentie',       naam: 'Retentie-ads naar Marcus',         fase: 'voorbereiding', dl: -28, bron: 'Builder' },
   // ── Uitvoer: in de week vóór de levering ──
   { key: 'flyer_binnen',        naam: 'Flyers binnen (depot of opgehaald)', fase: 'uitvoer', dl: -2, bron: 'Drukwerk' },
-  { key: 'koelkast_bestelling', naam: 'Koelkastbestelling geplaatst',       fase: 'uitvoer', dl: -1, bron: null },
-  { key: 'proef_bestelling',    naam: 'Proefbestelling geplaatst',          fase: 'uitvoer', dl: -1, bron: null },
+  // Bestellingen: geplaatst binnen de bestelweek zelf (vr t/m do, Ilse 20-10), dus deadline = donderdag.
+  // PIM leest de Shopify-orders: Marc op zijn eigen mail, koelkast (bezorgnaam 'Koelkast …') en proef op die van Ilse.
+  { key: 'koelkast_bestelling', naam: 'Koelkastbestelling geplaatst',       fase: 'uitvoer', dl:  6, bron: 'PIM' },
+  { key: 'proef_bestelling',    naam: 'Proefbestelling geplaatst',          fase: 'uitvoer', dl:  6, bron: 'PIM' },
+  { key: 'marc_bestelling',     naam: 'Bestelling Marc geplaatst',          fase: 'uitvoer', dl:  6, bron: 'PIM' },
   { key: 'live_check',          naam: 'Live menucheck',                     fase: 'uitvoer', dl:  0, bron: null },
 ];
 const STAP = Object.fromEntries(STAPPEN.map(s => [s.key, s]));
@@ -121,9 +124,26 @@ async function bronPim(env, weken) {
       koelkast_info: kk.length
         ? { klaar: true, at: kk[0].at, door: kk[0].door, info: kk.map(k => k.bedrijfNaam || `bedrijf ${k.bedrijfId}`).join(', ') }
         : { klaar: false },
+      ...bestellingStappen(w.bestellingen),
     };
   }
   return { ok: true, uitkomst };
+}
+
+// null = Shopify niet gelezen (of bezorgnaam onbekend) → stap blijft zoals hij is
+function bestellingStappen(lijst) {
+  if (!Array.isArray(lijst)) return { koelkast_bestelling: { klaar: null }, proef_bestelling: { klaar: null }, marc_bestelling: { klaar: null } };
+  const geldig = lijst.filter(b => !b.geannuleerd);
+  const vanIlse = geldig.filter(b => b.email === 'ilse.grootjes@thuysvers.nl');
+  const naamOnbekend = vanIlse.some(b => b.bezorgnaam == null);
+  const stap = (orders, onbekend = false) => orders.length
+    ? { klaar: true, at: orders[0].at, info: orders.map(b => b.nr).join(', ') }
+    : { klaar: onbekend ? null : false };
+  return {
+    koelkast_bestelling: stap(vanIlse.filter(b => /koelkast/i.test(b.bezorgnaam || '')), naamOnbekend),
+    proef_bestelling:    stap(vanIlse.filter(b => b.bezorgnaam != null && !/koelkast/i.test(b.bezorgnaam)), naamOnbekend),
+    marc_bestelling:     stap(geldig.filter(b => b.email === 'marc@puurveltman.nl')),
+  };
 }
 
 async function bronBuilder(env, weken) {

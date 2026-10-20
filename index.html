@@ -171,6 +171,13 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 .btn-mail-cancel { background: #f3f4f6; color: #6b7280; border: none; border-radius: 10px; padding: 12px 16px; font-size: 14px; font-weight: 600; cursor: pointer; }
 .btn-mail-row { background: none; border: none; cursor: pointer; color: #bbb; font-size: 18px; padding: 4px 6px; border-radius: 6px; transition: all 0.12s; line-height: 1; }
 .btn-mail-row:hover { color: #1a1a1a; background: #f0f0ee; }
+.mail-file-btn { display: inline-block !important; font-size: 13px !important; font-weight: 600 !important; color: #374151 !important; text-transform: none !important; letter-spacing: 0 !important; background: #f3f4f6; border-radius: 8px; padding: 8px 12px; cursor: pointer; }
+.mail-file-btn:hover { background: #e5e7eb; }
+.mail-files { margin-top: 6px; display: flex; flex-direction: column; gap: 4px; }
+.mail-file { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #374151; background: #f9fafb; border-radius: 6px; padding: 5px 8px; }
+.mail-file span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mail-file button { background: none; border: none; color: #9ca3af; cursor: pointer; font-size: 14px; padding: 0 2px; }
+.mail-file button:hover { color: #ef4444; }
 
 .empty { text-align: center; padding: 50px 20px; color: #c4c4c4; font-size: 14px; }
 .toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%) translateY(8px); background: #1a1a1a; color: white; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 500; opacity: 0; transition: all 0.22s; pointer-events: none; white-space: nowrap; z-index: 400; }
@@ -320,6 +327,11 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
     <div class="mail-note" style="margin-top:4px">
       <label>Bericht</label>
       <textarea id="mailBody" style="width:100%;border:1.5px solid #e5e7eb;border-radius:8px;padding:10px 11px;font-size:13px;font-family:inherit;outline:none;resize:vertical;min-height:130px;line-height:1.5"></textarea>
+    </div>
+    <div class="mail-note" style="margin-top:4px">
+      <label>Bijlagen (optioneel, samen max. 10 MB)</label>
+      <label class="mail-file-btn">📎 Bestand kiezen<input type="file" id="mailFiles" multiple style="display:none" /></label>
+      <div class="mail-files" id="mailFileList"></div>
     </div>
     <div class="mail-btns">
       <button class="btn-mail-cancel" id="btnMailCancel">Annuleren</button>
@@ -885,6 +897,37 @@ const CONTACTS = [
 
 let mailWeek = '';
 let mailTask = '';
+let mailBijlagen = []; // { name, size, content (base64) }
+const MAX_BIJLAGEN = 10 * 1024 * 1024;
+
+function renderBijlagen() {
+  document.getElementById('mailFileList').innerHTML = mailBijlagen.map((b, i) =>
+    `<div class="mail-file"><span>${esc(b.name)}</span><small>${Math.max(1, Math.round(b.size / 1024))} kB</small><button data-bi="${i}" title="Weghalen">✕</button></div>`
+  ).join('');
+  document.querySelectorAll('#mailFileList [data-bi]').forEach(btn =>
+    btn.addEventListener('click', () => { mailBijlagen.splice(+btn.dataset.bi, 1); renderBijlagen(); })
+  );
+}
+
+function leesBestand(file) {
+  return new Promise((ok, fout) => {
+    const r = new FileReader();
+    r.onload = () => ok(String(r.result).split(',')[1] || '');
+    r.onerror = () => fout(r.error);
+    r.readAsDataURL(file);
+  });
+}
+
+document.getElementById('mailFiles').addEventListener('change', async e => {
+  for (const f of e.target.files) {
+    const totaal = mailBijlagen.reduce((n, b) => n + b.size, 0) + f.size;
+    if (totaal > MAX_BIJLAGEN) { toast(`"${f.name}" past niet meer (max. 10 MB samen)`); continue; }
+    try { mailBijlagen.push({ name: f.name, size: f.size, content: await leesBestand(f) }); }
+    catch { toast(`"${f.name}" kon niet gelezen worden`); }
+  }
+  e.target.value = '';
+  renderBijlagen();
+});
 let selectedContacts = new Set();
 
 function greeting(indices) {
@@ -948,6 +991,9 @@ function openMailModal(week, taskTitle) {
   document.getElementById('mailBody').value        = '';
   document.getElementById('mailSubject').value     = '';
   document.getElementById('mailCustomEmail').value = '';
+  document.getElementById('btnMailSend').textContent = 'Verstuur';
+  mailBijlagen = [];
+  renderBijlagen();
 
   document.getElementById('contactList').innerHTML = CONTACTS.map((c,i) => `
     <div class="contact-row" data-ci="${i}">
@@ -1006,7 +1052,7 @@ document.getElementById('btnMailSend').onclick = async () => {
     const res = await fetch(`${API}/email`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ to, subject, text }),
+      body: JSON.stringify({ to, subject, text, attachments: mailBijlagen.map(({ name, content }) => ({ name, content })) }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Mislukt');
@@ -1173,6 +1219,7 @@ function renderWeken() {
           <div class="check${s.status === 'klaar' ? ' done' : ''}" data-week="${w.week}" data-stap="${s.key}" data-klaar="${s.status === 'klaar' ? 1 : 0}" data-auto="${s.bron && s.bron !== 'handmatig' ? 1 : 0}">${s.status === 'klaar' ? '✓' : ''}</div>
           <div style="flex:1;min-width:0"><div class="wk-naam">${esc(s.naam)}</div><div class="wk-meta">${meta}</div></div>
           <div class="wk-bron">${s.automatisch ? 'auto: ' + esc(s.automatisch) : 'handmatig'}</div>
+          <button class="btn-mail-row" data-wkmail="${w.week}" data-wknaam="${esc(s.naam)}" title="Mail versturen">✉</button>
         </div>`;
       }).join('');
     };
@@ -1195,6 +1242,7 @@ function renderWeken() {
     wekenOpen.has(wk) ? wekenOpen.delete(wk) : wekenOpen.add(wk);
     h.parentElement.classList.toggle('open');
   });
+  el.querySelectorAll('[data-wkmail]').forEach(b => b.onclick = () => openMailModal(b.dataset.wkmail, b.dataset.wknaam));
   el.querySelectorAll('.wk-stap .check').forEach(c => c.onclick = async () => {
     const klaar = c.dataset.klaar !== '1';
     if (!klaar && c.dataset.auto === '1' && !confirm('Deze stap is automatisch afgevinkt. Toch weer openzetten?')) return;

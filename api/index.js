@@ -511,6 +511,11 @@ export default {
       // POST /email
       if (pathname === '/email' && method === 'POST') {
         const body = await request.json();
+        // bijlagen: [{ name, content (base64) }], samen max. ~10 MB (base64 is 4/3 van het bestand)
+        const bijlagen = (body.attachments || []).filter(a => a?.name && a?.content);
+        if (bijlagen.reduce((n, a) => n + a.content.length, 0) > 14_000_000) {
+          return json({ error: 'Bijlagen te groot (max. 10 MB samen)' }, 400);
+        }
         const res = await fetch('https://api.brevo.com/v3/smtp/email', {
           method: 'POST',
           headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
@@ -519,6 +524,7 @@ export default {
             to: body.to.map(email => ({ email })),
             subject: body.subject,
             textContent: body.text,
+            ...(bijlagen.length ? { attachment: bijlagen.map(a => ({ name: a.name, content: a.content })) } : {}),
           }),
         });
         const data = await res.json();

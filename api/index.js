@@ -522,6 +522,9 @@ export default {
           body: JSON.stringify({
             sender: { name: 'Ilse Grootjes', email: 'ilse.grootjes@thuysvers.nl' },
             to: body.to.map(email => ({ email })),
+            // Brevo verstuurt buiten Gmail om, dus niets in Verzonden. Kopie naar
+            // Ilse via +todo-adres, zodat een Gmail-filter 'm onder een label zet.
+            bcc: [{ email: 'ilse.grootjes+todo@thuysvers.nl' }],
             subject: body.subject,
             textContent: body.text,
             ...(bijlagen.length ? { attachment: bijlagen.map(a => ({ name: a.name, content: a.content })) } : {}),

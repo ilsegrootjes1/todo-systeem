@@ -22,10 +22,10 @@ export const STAPPEN = [
   // ── Uitvoer: in de week vóór de levering ──
   { key: 'flyer_binnen',        naam: 'Flyers binnen (depot of opgehaald)', fase: 'uitvoer', dl: -2, bron: 'Drukwerk' },
   // Bestellingen: geplaatst binnen de bestelweek zelf (vr t/m do, Ilse 20-10), dus deadline = donderdag.
-  // PIM leest de Shopify-orders: Marc op zijn eigen mail, koelkast (bezorgnaam 'Koelkast …') en proef op die van Ilse.
-  { key: 'koelkast_bestelling', naam: 'Koelkastbestelling geplaatst',       fase: 'uitvoer', dl:  6, bron: 'PIM', start: '2026-W43' },
-  { key: 'proef_bestelling',    naam: 'Proefbestelling geplaatst',          fase: 'uitvoer', dl:  6, bron: 'PIM', start: '2026-W43' },
-  { key: 'marc_bestelling',     naam: 'Bestelling Marc geplaatst',          fase: 'uitvoer', dl:  6, bron: 'PIM', start: '2026-W43' },
+  // Handmatig afvinken (Ilse 26-10): de PIM mag geen Shopify-orders lezen (geen read_orders).
+  { key: 'koelkast_bestelling', naam: 'Koelkastbestelling geplaatst',       fase: 'uitvoer', dl:  6, start: '2026-W43' },
+  { key: 'proef_bestelling',    naam: 'Proefbestelling geplaatst',          fase: 'uitvoer', dl:  6, start: '2026-W43' },
+  { key: 'marc_bestelling',     naam: 'Bestelling Marc geplaatst',          fase: 'uitvoer', dl:  6, start: '2026-W43' },
   { key: 'live_check',          naam: 'Live menucheck',                     fase: 'uitvoer', dl:  0, bron: null },
 ];
 const STAP = Object.fromEntries(STAPPEN.map(s => [s.key, s]));
@@ -124,33 +124,9 @@ async function bronPim(env, weken) {
       koelkast_info: kk.length
         ? { klaar: true, at: kk[0].at, door: kk[0].door, info: kk.map(k => k.bedrijfNaam || `bedrijf ${k.bedrijfId}`).join(', ') }
         : { klaar: false },
-      ...bestellingStappen(w.bestellingen),
     };
   }
   return { ok: true, uitkomst };
-}
-
-// null = Shopify niet gelezen (of bezorgnaam onbekend) → stap blijft zoals hij is
-function bestellingStappen(lijst) {
-  if (!Array.isArray(lijst)) {
-    const info = 'Shopify-orders niet leesbaar via de PIM';
-    return { koelkast_bestelling: { klaar: null, info }, proef_bestelling: { klaar: null, info }, marc_bestelling: { klaar: null, info } };
-  }
-  const geldig = lijst.filter(b => !b.geannuleerd);
-  const vanIlse = geldig.filter(b => b.email === 'ilse.grootjes@thuysvers.nl');
-  // koelkast: 'koelkast' in de ordernotitie (Ilse 20-10) of als bezorgnaam
-  const isKoelkast = b => /koelkast/i.test(`${b.notitie || ''} ${b.bezorgnaam || ''}`);
-  const naamOnbekend = vanIlse.some(b => b.bezorgnaam == null && !isKoelkast(b));
-  // bij twijfel laten zien wat er wél gevonden is, zodat je ziet waarom er niets is afgevinkt
-  const twijfel = naamOnbekend ? `bezorgnaam niet leesbaar; orders van Ilse: ${vanIlse.map(b => b.nr).join(', ')}` : null;
-  const stap = (orders, onbekend = false) => orders.length
-    ? { klaar: true, at: orders[0].at, info: orders.map(b => b.nr).join(', ') }
-    : { klaar: onbekend ? null : false, info: onbekend ? twijfel : null };
-  return {
-    koelkast_bestelling: stap(vanIlse.filter(isKoelkast), naamOnbekend),
-    proef_bestelling:    stap(vanIlse.filter(b => !isKoelkast(b) && b.bezorgnaam != null), naamOnbekend),
-    marc_bestelling:     stap(geldig.filter(b => b.email === 'marc@puurveltman.nl')),
-  };
 }
 
 async function bronBuilder(env, weken) {

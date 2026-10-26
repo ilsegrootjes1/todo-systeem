@@ -132,15 +132,20 @@ async function bronPim(env, weken) {
 
 // null = Shopify niet gelezen (of bezorgnaam onbekend) → stap blijft zoals hij is
 function bestellingStappen(lijst) {
-  if (!Array.isArray(lijst)) return { koelkast_bestelling: { klaar: null }, proef_bestelling: { klaar: null }, marc_bestelling: { klaar: null } };
+  if (!Array.isArray(lijst)) {
+    const info = 'Shopify-orders niet leesbaar via de PIM';
+    return { koelkast_bestelling: { klaar: null, info }, proef_bestelling: { klaar: null, info }, marc_bestelling: { klaar: null, info } };
+  }
   const geldig = lijst.filter(b => !b.geannuleerd);
   const vanIlse = geldig.filter(b => b.email === 'ilse.grootjes@thuysvers.nl');
   // koelkast: 'koelkast' in de ordernotitie (Ilse 20-10) of als bezorgnaam
   const isKoelkast = b => /koelkast/i.test(`${b.notitie || ''} ${b.bezorgnaam || ''}`);
   const naamOnbekend = vanIlse.some(b => b.bezorgnaam == null && !isKoelkast(b));
+  // bij twijfel laten zien wat er wél gevonden is, zodat je ziet waarom er niets is afgevinkt
+  const twijfel = naamOnbekend ? `bezorgnaam niet leesbaar; orders van Ilse: ${vanIlse.map(b => b.nr).join(', ')}` : null;
   const stap = (orders, onbekend = false) => orders.length
     ? { klaar: true, at: orders[0].at, info: orders.map(b => b.nr).join(', ') }
-    : { klaar: onbekend ? null : false };
+    : { klaar: onbekend ? null : false, info: onbekend ? twijfel : null };
   return {
     koelkast_bestelling: stap(vanIlse.filter(isKoelkast), naamOnbekend),
     proef_bestelling:    stap(vanIlse.filter(b => !isKoelkast(b) && b.bezorgnaam != null), naamOnbekend),

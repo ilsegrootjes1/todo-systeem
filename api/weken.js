@@ -146,7 +146,7 @@ async function bronBuilder(env, weken) {
     uitkomst[week] = {
       flyer_gemaakt: flyer ? { klaar: true, at: flyer.at } : { klaar: false },
       post_gemaakt:  post  ? { klaar: true, at: post.at }  : { klaar: false },
-      retentie: mail ? { klaar: true, at: mail.at, info: 'gemaild vanuit de Builder' }
+      retentie: mail ? { klaar: true, at: mail.at, info: 'via de Builder naar Marcus' }
               : { klaar: false, info: ret ? 'gemaakt, nog niet gemaild' : null },
     };
   }
